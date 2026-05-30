@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 export default function UploadPage() {
-
   const [file, setFile] = useState<File | null>(null);
 
   return (
