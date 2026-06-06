@@ -64,7 +64,7 @@ export default function UploadPage() {
     }
 
     setLoading(false);
-  }
+  };
   const handleRewrite = async () => {
   if (!file) {
     alert("Upload a resume first");
@@ -82,7 +82,21 @@ export default function UploadPage() {
         body: formData,
       }
     );
-    const handleJobMatch = async () => {
+
+    const data = await response.json();
+
+    if (data.success) {
+      setRewrittenResume(data.resume);
+    } else {
+      alert(data.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Resume rewrite failed");
+  }
+};
+
+const handleJobMatch = async () => {
   if (!file) {
     alert("Upload resume first");
     return;
@@ -120,20 +134,13 @@ export default function UploadPage() {
   }
 };
 
-    const data = await response.json();
+return (
 
-    if (data.success) {
-      setRewrittenResume(data.resume);
-    } else {
-      alert(data.error);
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Resume rewrite failed");
-  }
-};
+  
 
-  return (
+  
+
+  
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
 
       {/* Gold Glow */}
@@ -208,11 +215,30 @@ export default function UploadPage() {
             />
 
             {file && (
-              <div className="flex items-center gap-2 text-green-400 mt-5">
-                <FileText size={18} />
-                {file.name}
-              </div>
-            )}
+  <div className="flex items-center gap-2 text-green-400 mt-5">
+    <FileText size={18} />
+    {file.name}
+  </div>
+)}
+
+<textarea
+  placeholder="Paste Job Description Here"
+  value={jobDescription}
+  onChange={(e) =>
+    setJobDescription(e.target.value)
+  }
+  className="
+    mt-6
+    w-full
+    h-40
+    bg-black/40
+    border
+    border-yellow-500/20
+    rounded-xl
+    p-4
+    text-white
+  "
+/>
 
             <button
               onClick={handleUpload}
@@ -235,6 +261,21 @@ export default function UploadPage() {
                 ? "Analyzing..."
                 : "Analyze Resume"}
             </button>
+            <button
+  onClick={handleJobMatch}
+  className="
+    mt-4
+    px-10
+    py-4
+    rounded-xl
+    font-semibold
+    bg-blue-600
+    hover:bg-blue-700
+    transition
+  "
+>
+  Analyze Job Match
+</button>
 
           </div>
 
@@ -328,7 +369,7 @@ export default function UploadPage() {
                 </p>
 
               </div>
-
+ 
             </div>
             <button
   onClick={handleRewrite}
