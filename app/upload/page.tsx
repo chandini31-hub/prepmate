@@ -23,8 +23,13 @@ export default function UploadPage() {
   const [result, setResult] = useState<any>(null);
   const [rewrittenResume, setRewrittenResume] = useState("");
   const [loading, setLoading] = useState(false);
+    const [jobDescription, setJobDescription] =
+    useState("");
 
-  const handleUpload = async () => {
+  const [jobMatchResult, setJobMatchResult] =
+    useState<any>(null);
+
+  async function handleUpload() {
     if (!file) {
       alert("Please select a PDF");
       return;
@@ -59,7 +64,7 @@ export default function UploadPage() {
     }
 
     setLoading(false);
-  };
+  }
   const handleRewrite = async () => {
   if (!file) {
     alert("Upload a resume first");
@@ -77,6 +82,43 @@ export default function UploadPage() {
         body: formData,
       }
     );
+    const handleJobMatch = async () => {
+  if (!file) {
+    alert("Upload resume first");
+    return;
+  }
+
+  if (!jobDescription.trim()) {
+    alert("Enter job description");
+    return;
+  }
+
+  const formData = new FormData();
+
+  formData.append("resume", file);
+  formData.append("jobDescription", jobDescription);
+
+  try {
+    const response = await fetch(
+      "http://localhost:5001/job-match",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.success) {
+      setJobMatchResult(data.result);
+    } else {
+      alert(data.error);
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Job Match Failed");
+  }
+};
 
     const data = await response.json();
 
@@ -305,6 +347,7 @@ export default function UploadPage() {
 >
   ✨ Generate Improved Resume
 </button>
+
 
             {/* Grid Cards */}
             <div className="grid md:grid-cols-2 gap-6">

@@ -9,6 +9,7 @@ const fs = require("fs");
 const {
   analyzeResume,
   rewriteResume,
+  analyzeJobMatch,
 } = require("./gemini");
 
 console.log(
@@ -201,6 +202,49 @@ app.post(
       console.error(error);
 
       return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+app.post(
+  "/job-match",
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      const dataBuffer = fs.readFileSync(
+        req.file.path
+      );
+
+      const pdfData = await pdf(dataBuffer);
+
+      const resumeText = pdfData.text;
+
+      const jobDescription =
+        req.body.jobDescription;
+
+      const analysis =
+        await analyzeJobMatch(
+          resumeText,
+          jobDescription
+        );
+
+      const cleaned = analysis
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const parsed = JSON.parse(cleaned);
+
+      return res.json({
+        success: true,
+        result: parsed,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
         success: false,
         error: error.message,
       });

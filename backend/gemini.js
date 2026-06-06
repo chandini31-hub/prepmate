@@ -93,8 +93,48 @@ temperature: 0.4,
 
 return completion.choices[0].message.content;
 }
+async function analyzeJobMatch(
+  resumeText,
+  jobDescription
+) {
+  const prompt = `
+You are an ATS and hiring expert.
+
+Compare this resume against the job description.
+
+Return ONLY valid JSON.
+
+{
+  "matchScore": 0,
+  "matchingSkills": [],
+  "missingSkills": [],
+  "suggestions": []
+}
+
+Resume:
+${resumeText}
+
+Job Description:
+${jobDescription}
+`;
+
+  const completion =
+    await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+    });
+
+  return completion.choices[0].message.content;
+}
 
 module.exports = {
-analyzeResume,
-rewriteResume,
+  analyzeResume,
+  rewriteResume,
+  analyzeJobMatch,
 };
