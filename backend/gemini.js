@@ -132,10 +132,51 @@ ${jobDescription}
 
   return completion.choices[0].message.content;
 }
+async function generateRoadmap(
+  resumeText,
+  jobDescription
+) {
+  const prompt = `
+You are a career coach.
+
+Resume:
+${resumeText}
+
+Job Description:
+${jobDescription}
+
+Create JSON only:
+
+{
+  "missingSkills": [],
+  "roadmap": [
+    {
+      "week": "Week 1",
+      "topics": []
+    }
+  ]
+}
+`;
+
+  const completion =
+    await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama3.3-70b-versatile",
+    });
+
+  return completion.choices[0].message.content;
+}
 
 module.exports = {
   analyzeResume,
   rewriteResume,
   analyzeJobMatch,
+  generateRoadmap,
 };
+
 

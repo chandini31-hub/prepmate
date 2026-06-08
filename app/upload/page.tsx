@@ -23,11 +23,15 @@ export default function UploadPage() {
   const [result, setResult] = useState<any>(null);
   const [rewrittenResume, setRewrittenResume] = useState("");
   const [loading, setLoading] = useState(false);
-    const [jobDescription, setJobDescription] =
-    useState("");
+  const [jobDescription, setJobDescription] =
+  useState("");
 
-  const [jobMatchResult, setJobMatchResult] =
-    useState<any>(null);
+const [jobMatchResult, setJobMatchResult] =
+  useState<any>(null);
+
+  const [roadmapResult, setRoadmapResult] =
+  useState<any>(null);
+    
 
   async function handleUpload() {
     if (!file) {
@@ -95,8 +99,58 @@ export default function UploadPage() {
     alert("Resume rewrite failed");
   }
 };
-
 const handleJobMatch = async () => {
+  console.log("JOB MATCH CLICKED");
+  if (!file) {
+    alert("Upload resume first");
+    return;
+  }
+
+  if (!jobDescription.trim()) {
+    alert("Enter job description");
+    return;
+  }
+  console.log("VALIDATION PASSED");
+
+  const formData = new FormData();
+
+  formData.append("resume", file);
+  formData.append(
+    "jobDescription",
+    jobDescription
+  );
+
+  try {
+    console.log("SENDING REQUEST");
+    const response = await fetch(
+      "http://localhost:5001/job-match",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    console.log("RESPONSE RECEIVED");
+
+    const data = await response.json();
+    console.log("DATA:",JSON.stringify(data,null,2));
+
+    if (data.success) {
+  setJobMatchResult(data.result);
+  alert(
+    "Match Score: " +
+      Math.round(data.result.matchScore * 100) +
+      "%"
+  );
+}
+    else {
+      alert(data.error);
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Job Match Failed");
+  }
+};
+const handleRoadmap = async () => {
   if (!file) {
     alert("Upload resume first");
     return;
@@ -110,11 +164,14 @@ const handleJobMatch = async () => {
   const formData = new FormData();
 
   formData.append("resume", file);
-  formData.append("jobDescription", jobDescription);
+  formData.append(
+    "jobDescription",
+    jobDescription
+  );
 
   try {
     const response = await fetch(
-      "http://localhost:5001/job-match",
+      "http://localhost:5001/roadmap",
       {
         method: "POST",
         body: formData,
@@ -124,23 +181,20 @@ const handleJobMatch = async () => {
     const data = await response.json();
 
     if (data.success) {
-      setJobMatchResult(data.result);
+      setRoadmapResult(data.result);
     } else {
       alert(data.error);
     }
   } catch (error) {
     console.error(error);
-    alert("Job Match Failed");
+    alert("Roadmap generation failed");
   }
 };
 
+
+
+    
 return (
-
-  
-
-  
-
-  
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
 
       {/* Gold Glow */}
@@ -189,8 +243,7 @@ return (
         <div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
 
           <div className="flex flex-col items-center">
-
-            <Upload
+       <Upload
               size={65}
               className="text-yellow-400"
             />
@@ -220,7 +273,6 @@ return (
     {file.name}
   </div>
 )}
-
 <textarea
   placeholder="Paste Job Description Here"
   value={jobDescription}
@@ -240,28 +292,7 @@ return (
   "
 />
 
-            <button
-              onClick={handleUpload}
-              className="
-                mt-8
-                px-10
-                py-4
-                rounded-xl
-                font-semibold
-                bg-linear-to-r
-                from-yellow-500
-                to-amber-600
-                hover:scale-105
-                transition
-                shadow-lg
-                shadow-yellow-500/20
-              "
-            >
-              {loading
-                ? "Analyzing..."
-                : "Analyze Resume"}
-            </button>
-            <button
+<button
   onClick={handleJobMatch}
   className="
     mt-4
@@ -269,13 +300,71 @@ return (
     py-4
     rounded-xl
     font-semibold
-    bg-blue-600
-    hover:bg-blue-700
+    bg-linear-to-r
+    from-yellow-500
+    to-amber-600
+    hover:scale-105
+    hover:bg-yellow-700
     transition
   "
 >
   Analyze Job Match
 </button>
+<button
+  onClick={handleRoadmap}
+  className="
+    mt-4
+    px-10
+    py-4
+    rounded-xl
+    font-semibold
+    bg-purple-600
+    hover:bg-purple-700
+    transition
+  "
+>
+  Generate Skill Roadmap
+</button>
+<button
+  onClick={handleUpload}
+  className="
+    mt-8
+    px-10
+    py-4
+    rounded-xl
+    font-semibold
+    bg-linear-to-r
+    from-yellow-500
+    to-amber-600
+    hover:scale-105
+    transition
+    shadow-lg
+    shadow-yellow-500/20
+  "
+>
+  {loading ? "Analyzing..." : "Analyze Resume"}
+</button>
+
+<button
+  onClick={handleRewrite}
+  className="
+    mt-4
+    px-10
+    py-4
+    rounded-xl
+    font-semibold
+    bg-linear-to-r
+    from-yellow-500
+    to-amber-600
+    hover:scale-105
+    transition
+    shadow-lg
+    shadow-yellow-500/20
+  "
+>
+  ✨ Generate Improved Resume
+</button>
+
 
           </div>
 
@@ -303,21 +392,44 @@ return (
 </pre>
 
 <button
-  onClick={() => {
-    const blob = new Blob(
-      [rewrittenResume],
-      { type: "text/plain" }
-    );
+  onClick={async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5001/download-pdf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resume: rewrittenResume,
+          }),
+        }
+      );
 
-    const url =
-      window.URL.createObjectURL(blob);
+      const blob = await response.blob();
 
-    const a =
-      document.createElement("a");
+      const url =
+        window.URL.createObjectURL(blob);
 
-    a.href = url;
-    a.download = "Improved_Resume.txt";
-    a.click();
+      const a =
+        document.createElement("a");
+
+      a.href = url;
+      a.download =
+        "Improved_Resume.pdf";
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("PDF Download Failed");
+    }
   }}
   className="
     mt-6
@@ -329,10 +441,121 @@ return (
     transition
   "
 >
-  Download Resume
+  Download Improved Resume PDF
 </button>
+</div>
+            )}
+{jobMatchResult && (
+  <div className="mt-12 bg-white/5 border border-blue-500/20 rounded-3xl p-8">
+
+    <h2 className="text-3xl font-bold text-blue-400 mb-6">
+      Job Match Analysis
+    </h2>
+
+    <p className="text-4xl font-bold text-green-400 mb-6">
+      {Math.round(jobMatchResult.matchScore * 100)}%
+    </p>
+
+    <h3 className="text-xl font-semibold mb-3">
+      Matching Skills
+    </h3>
+
+    <div className="flex flex-wrap gap-2 mb-6">
+      {jobMatchResult.matchingSkills?.map(
+        (skill: string, index: number) => (
+          <span
+            key={index}
+            className="px-3 py-2 rounded-full bg-green-500/20 text-green-300"
+          >
+            {skill}
+          </span>
+        )
+      )}
+    </div>
+
+    <h3 className="text-xl font-semibold mb-3">
+      Missing Skills
+    </h3>
+
+    <div className="flex flex-wrap gap-2 mb-6">
+      {jobMatchResult.missingSkills?.map(
+        (skill: string, index: number) => (
+          <span
+            key={index}
+            className="px-3 py-2 rounded-full bg-red-500/20 text-red-300"
+          >
+            {skill}
+          </span>
+        )
+      )}
+    </div>
+
+    <h3 className="text-xl font-semibold mb-3">
+      Suggestions
+    </h3>
+
+    <ul className="space-y-2">
+      {jobMatchResult.suggestions?.map(
+        (item: string, index: number) => (
+          <li key={index}>
+            💡 {item}
+          </li>
+        )
+      )}
+    </ul>
+
+  </div>
+    )}
+    {roadmapResult && (
+  <div className="mt-12 bg-white/5 border border-purple-500/20 rounded-3xl p-8">
+
+    <h2 className="text-3xl font-bold text-purple-400 mb-6">
+      Skill Gap Roadmap
+    </h2>
+
+    <h3 className="text-xl font-semibold mb-4">
+      Missing Skills
+    </h3>
+
+    <div className="flex flex-wrap gap-3 mb-8">
+      {roadmapResult.missingSkills?.map(
+        (skill: string, index: number) => (
+          <span
+            key={index}
+            className="px-4 py-2 rounded-full bg-red-500/20 text-red-300"
+          >
+            {skill}
+          </span>
+        )
+      )}
+    </div>
+
+    {roadmapResult.roadmap?.map(
+      (week: any, index: number) => (
+        <div
+          key={index}
+          className="mb-6 p-4 rounded-xl bg-black/30"
+        >
+          <h4 className="text-lg font-bold text-purple-300 mb-3">
+            {week.week}
+          </h4>
+
+          <ul className="space-y-2">
+            {week.topics?.map(
+              (topic: string, i: number) => (
+                <li key={i}>
+                  📚 {topic}
+                </li>
+              )
+            )}
+          </ul>
+        </div>
+      )
+    )}
   </div>
 )}
+  
+
 
             {/* ATS Score */}
             <div className="bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
@@ -371,23 +594,7 @@ return (
               </div>
  
             </div>
-            <button
-  onClick={handleRewrite}
-  className="
-    mt-6
-    px-8
-    py-3
-    rounded-xl
-    bg-linear-to-r
-    from-yellow-500
-    to-amber-600
-    font-semibold
-    hover:scale-105
-    transition
-  "
->
-  ✨ Generate Improved Resume
-</button>
+            
 
 
             {/* Grid Cards */}

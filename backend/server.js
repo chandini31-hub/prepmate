@@ -1,3 +1,6 @@
+const PDFDocument = require("pdfkit");
+const path = require("path");
+
 require("dotenv").config();
 
 const express = require("express");
@@ -10,6 +13,7 @@ const {
   analyzeResume,
   rewriteResume,
   analyzeJobMatch,
+  generateRoadmap,
 } = require("./gemini");
 
 console.log(
@@ -154,11 +158,7 @@ return res.json({
   success: true,
   result: parsed,
 });
-      return res.json({
-        success: true,
-        result: parsed,
-      });
-
+      
     } catch (error) {
       console.error(
         "FULL ERROR:",
@@ -238,6 +238,94 @@ app.post(
       const parsed = JSON.parse(cleaned);
 
       return res.json({
+        success: true,
+        result: parsed,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+app.post("/download-pdf", async (req, res) => {
+  try {
+    const { resume } = req.body;
+
+    const doc = new PDFDocument({
+      margin: 50,
+      size: "A4",
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/pdf"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="Improved_Resume.pdf"'
+    );
+
+    doc.pipe(res);
+
+    doc
+      .fontSize(24)
+      .text("Improved Resume", {
+        align: "center",
+      });
+
+    doc.moveDown();
+
+    doc
+      .fontSize(12)
+      .text(resume);
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+app.post(
+  "/roadmap",
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      const dataBuffer =
+        fs.readFileSync(req.file.path);
+
+      const pdfData =
+        await pdf(dataBuffer);
+
+      const resumeText =
+        pdfData.text;
+
+      const jobDescription =
+        req.body.jobDescription;
+
+      const roadmap =
+        await generateRoadmap(
+          resumeText,
+          jobDescription
+        );
+
+      const cleaned = roadmap
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const parsed =
+        JSON.parse(cleaned);
+
+      res.json({
         success: true,
         result: parsed,
       });
