@@ -1,6 +1,10 @@
 "use client";
+import {
+  useState,
+  useEffect
+} from "react";
 
-import { useState } from "react";
+
 import {
   Upload,
   Sparkles,
@@ -31,6 +35,50 @@ const [jobMatchResult, setJobMatchResult] =
 
   const [roadmapResult, setRoadmapResult] =
   useState<any>(null);
+  const [selectedQuestion,
+  setSelectedQuestion] =
+  useState("");
+
+const [answer,
+  setAnswer] =
+  useState("");
+  const [interviewResult, setInterviewResult] =
+  useState<any>(null);
+  const [
+  mockInterviewResult,
+  setMockInterviewResult
+] = useState<any>(null);
+const [
+  interviewHistory,
+  setInterviewHistory
+] = useState<any[]>([]);
+  useEffect(() => {
+
+    const history =
+      JSON.parse(
+        localStorage.getItem(
+          "interviewHistory"
+        ) || "[]"
+      );
+
+    setInterviewHistory(
+      history
+    );
+
+  }, []);
+  const [mentorQuestion,
+  setMentorQuestion] =
+  useState("");
+
+const [mentorResponse,
+  setMentorResponse] =
+  useState("");
+ const [
+  resumeText,
+  setResumeText
+] = useState("");
+
+
     
 
   async function handleUpload() {
@@ -54,12 +102,27 @@ const [jobMatchResult, setJobMatchResult] =
       );
 
       const data = await response.json();
+      console.log(
+  "UPLOAD DATA:",
+  data
+);
 
       console.log("Backend Response:", data);
+if (data.success) {
 
-      if (data.success) {
-        setResult(data.result);
-      } else {
+  setResult(data.result);
+
+  console.log(
+    "UPLOAD DATA:",
+    data
+  );
+
+  setResumeText(
+    data.resumeText || ""
+  );
+
+}
+      else {
         alert(data.error || "Something went wrong");
       }
     } catch (error) {
@@ -150,6 +213,86 @@ const handleJobMatch = async () => {
     alert("Job Match Failed");
   }
 };
+
+const handleInterviewEvaluation =
+  async () => {
+    console.log("SUBMIT CLICKED");
+
+    if (!selectedQuestion) {
+      alert("Select a question");
+      return;
+    }
+
+    if (!answer.trim()) {
+      alert("Enter your answer");
+      return;
+    }
+
+    try {
+
+      const response =
+        await fetch(
+          "http://localhost:5001/mock-interview",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              question:
+                selectedQuestion,
+              answer,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      console.log(data);
+
+      if (data.success) {
+
+  setMockInterviewResult(
+    data.result
+  );
+
+  const history =
+    JSON.parse(
+      localStorage.getItem(
+        "interviewHistory"
+      ) || "[]"
+    );
+
+  history.push({
+    question:
+      selectedQuestion,
+    score:
+      data.result.score,
+    timestamp:
+      new Date().toISOString(),
+  });
+
+  localStorage.setItem(
+    "interviewHistory",
+    JSON.stringify(history)
+  );
+}
+      else {
+        alert(data.error);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Interview Evaluation Failed"
+      );
+    }
+
+  };
+
+
 const handleRoadmap = async () => {
   if (!file) {
     alert("Upload resume first");
@@ -191,6 +334,114 @@ const handleRoadmap = async () => {
   }
 };
 
+        
+const handleInterviewQuestions =
+  async () => {
+    if (!file) {
+      alert("Upload resume first");
+      return;
+    }
+
+    if (!jobDescription.trim()) {
+      alert("Enter job description");
+      return;
+    }
+
+    const formData =
+      new FormData();
+
+    formData.append(
+      "resume",
+      file
+    );
+
+    formData.append(
+      "jobDescription",
+      jobDescription
+    );
+
+    try {
+      const response =
+        await fetch(
+          "http://localhost:5001/interview-questions",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (data.success) {
+        console.log(
+  "INTERVIEW DATA:"
+);
+
+console.log(
+  JSON.stringify(
+    data.result,
+    null,
+    2
+  )
+);
+        setInterviewResult(
+          data.result
+        );
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Interview Generation Failed"
+      );
+    }
+  };
+  const handleCareerMentor =
+  async () => {
+    console.log("QUESTION:", mentorQuestion);
+console.log("RESUME:", resumeText);
+console.log("JD:", jobDescription);
+
+    try {
+
+      const response =
+        await fetch(
+          "http://localhost:5001/career-mentor",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              question:
+                mentorQuestion,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (data.success) {
+
+        setMentorResponse(
+          data.result
+        );
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+
 
 
     
@@ -204,6 +455,51 @@ return (
       <div className="absolute top-0 left-1/3 w-96 h-96 bg-yellow-500/10 blur-[140px] rounded-full"></div>
 
       <div className="max-w-6xl mx-auto px-6 py-16 relative z-10">
+        {interviewHistory.length > 0 && (
+  <div className="
+    mt-6
+    bg-white/5
+    backdrop-blur-xl
+    border
+    border-yellow-500/20
+    rounded-3xl
+    p-8
+  ">
+
+    <h2 className="
+      text-3xl
+      font-bold
+      text-yellow-400
+      mb-6
+    ">
+      Interview Dashboard
+    </h2>
+
+    <h3 className="
+      text-2xl
+      font-bold
+      text-green-400
+    ">
+      Average Score: {
+        (
+          interviewHistory.reduce(
+            (sum, item) =>
+              sum + item.score,
+            0
+          ) /
+          interviewHistory.length
+        ).toFixed(1)
+      } /10
+    </h3>
+
+    <p className="mt-3 text-gray-300">
+      Questions Attempted:
+      {" "}
+      {interviewHistory.length}
+    </p>
+
+  </div>
+)}
 
         {/* Header */}
         <div className="text-center">
@@ -238,6 +534,131 @@ return (
           </div>
 
         </div>
+        {/* AI Career Mentor */}
+
+<div className="
+  mt-12
+  bg-white/5
+  backdrop-blur-xl
+  border
+  border-yellow-500/20
+  rounded-3xl
+  p-8
+">
+
+  <h2 className="
+    text-3xl
+    font-bold
+    text-yellow-400
+    mb-6
+  ">
+    AI Career Mentor
+  </h2>
+
+  <textarea
+    value={mentorQuestion}
+    onChange={(e) =>
+      setMentorQuestion(
+        e.target.value
+      )
+    }
+    placeholder="Ask your career question..."
+    className="
+      w-full
+      h-40
+      bg-black/40
+      border
+      border-yellow-500/20
+      rounded-xl
+      p-4
+      text-white
+    "
+  />
+
+  <button
+    onClick={handleCareerMentor}
+    className="
+      mt-4
+      px-8
+      py-3
+      rounded-xl
+      font-semibold
+      bg-gradient-to-r
+      from-yellow-500
+      to-amber-600
+      text-black
+    "
+  >
+    Ask AI Mentor
+  </button>
+
+</div>
+
+{mentorResponse && (
+  <div className="
+    mt-6
+    bg-white/5
+    backdrop-blur-xl
+    border
+    border-yellow-500/20
+    rounded-3xl
+    p-8
+  ">
+    <h2 className="
+      text-2xl
+      font-bold
+      text-yellow-400
+      mb-4
+    ">
+      Mentor Advice
+    </h2>
+
+    <div className="
+      whitespace-pre-wrap
+      text-gray-300
+      leading-8
+    ">
+      {mentorResponse}
+    </div>
+
+  </div>
+)}
+{mentorResponse && (
+
+  <div className="
+    mt-8
+    bg-white/5
+    backdrop-blur-xl
+    border
+    border-yellow-500/20
+    rounded-3xl
+    p-8
+  ">
+
+    <h2 className="
+      text-3xl
+      font-bold
+      text-yellow-400
+      mb-6
+    ">
+      Mentor Advice
+    </h2>
+
+    <div className="
+      whitespace-pre-wrap
+      leading-8
+      text-gray-300
+    ">
+      {mentorResponse}
+    </div>
+
+  </div>
+
+)}
+
+{/* Upload Card */}
+<div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
+</div>
 
         {/* Upload Card */}
         <div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
@@ -274,11 +695,15 @@ return (
   </div>
 )}
 <textarea
-  placeholder="Paste Job Description Here"
   value={jobDescription}
   onChange={(e) =>
-    setJobDescription(e.target.value)
+    setJobDescription(
+      e.target.value
+    )
   }
+  placeholder="Paste job description"
+
+
   className="
     mt-6
     w-full
@@ -318,12 +743,35 @@ return (
     py-4
     rounded-xl
     font-semibold
-    bg-purple-600
-    hover:bg-purple-700
-    transition
+    bg-linear-to-r
+  from-yellow-500
+  to-amber-600
+  hover:scale-105
+  transition
+  shadow-lg
+  shadow-yellow-500/20
   "
 >
   Generate Skill Roadmap
+</button>
+<button
+  onClick={handleInterviewQuestions}
+  className="
+    mt-4
+    px-10
+    py-4
+    rounded-xl
+    font-semibold
+    bg-linear-to-r
+    from-yellow-500
+    to-amber-600
+    hover:scale-105
+    transition
+    shadow-lg
+    shadow-yellow-500/20
+  "
+>
+  Generate Interview Questions
 </button>
 <button
   onClick={handleUpload}
@@ -436,8 +884,13 @@ return (
     px-6
     py-3
     rounded-xl
-    bg-green-600
-    hover:bg-green-700
+    font-semibold
+bg-linear-to-r
+from-yellow-500
+to-amber-600
+hover:scale-105
+shadow-lg
+shadow-yellow-500/20
     transition
   "
 >
@@ -453,7 +906,7 @@ return (
     </h2>
 
     <p className="text-4xl font-bold text-green-400 mb-6">
-      {Math.round(jobMatchResult.matchScore * 100)}%
+      {jobMatchResult.matchScore}%
     </p>
 
     <h3 className="text-xl font-semibold mb-3">
@@ -552,6 +1005,317 @@ return (
         </div>
       )
     )}
+  </div>
+)}
+{interviewResult && (
+  <div className="
+    mt-12
+    bg-white/5
+    backdrop-blur-xl
+    border
+    border-yellow-500/20
+    rounded-3xl
+    p-8
+  ">
+
+    <h2 className="
+      text-3xl
+      font-bold
+      text-yellow-400
+      mb-8
+    ">
+      AI Interview Questions
+    </h2>
+
+    <div className="grid md:grid-cols-2 gap-6">
+
+      <div>
+        <h3 className="text-xl font-bold text-yellow-400 mb-4">
+          Technical
+        </h3>
+
+        <ul className="space-y-2">
+          {interviewResult.technical?.map(
+  (q: any, i: number) => (
+    <li
+      key={i}
+      onClick={() =>
+        setSelectedQuestion(q)
+      }
+      className="
+        cursor-pointer
+        hover:text-yellow-400
+      "
+    >🧠 {q}
+      {" "}
+      <span className="text-yellow-400">
+        ({q.company})
+      </span>
+    </li>
+  )
+)}
+        </ul>
+      </div>
+      <div>
+  <h3 className="text-xl font-bold text-yellow-400 mb-4">
+    DSA
+  </h3>
+
+  <ul className="space-y-2">
+   {interviewResult.dsa?.map(
+  (q: any, i: number) => (
+    <li
+      key={i}
+      onClick={() =>
+        setSelectedQuestion(q)
+      }
+      className="
+        cursor-pointer
+        hover:text-yellow-400
+      "
+    >
+      🧠 {q}
+      {" "}
+      <span className="text-yellow-400">
+        ({q.company})
+      </span>
+    </li>
+  )
+)}
+  </ul>
+</div>
+
+      <div>
+        <h3 className="text-xl font-bold text-yellow-400 mb-4">
+          Behavioral
+        </h3>
+
+        <ul className="space-y-2">
+          {interviewResult.behavioral?.map(
+  (q: any, i: number) => (
+    <li
+      key={i}
+      onClick={() =>
+        setSelectedQuestion(q)
+      }
+      className="
+        cursor-pointer
+        hover:text-yellow-400
+      "
+    >
+      🤝 {q}
+      {" "}
+      <span className="text-yellow-400">
+        ({q.company})
+      </span>
+    </li>
+  )
+)}
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-xl font-bold text-yellow-400 mb-4">
+          Project
+        </h3>
+
+        <ul className="space-y-2">
+          {interviewResult.project?.map(
+  (q: any, i: number) => (
+    <li
+      key={i}
+      onClick={() =>
+        setSelectedQuestion(q)
+      }
+      className="
+        cursor-pointer
+        hover:text-yellow-400
+      "
+    >
+      🚀 {q}
+      {" "}
+      <span className="text-yellow-400">
+        ({q.company})
+      </span>
+    </li>
+  )
+)}
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-xl font-bold text-yellow-400 mb-4">
+          HR
+        </h3>
+
+        <ul className="space-y-2">{interviewResult.hr?.map(
+  (q: any, i: number) => (
+    <li
+      key={i}
+      onClick={() =>
+        setSelectedQuestion(q)
+      }
+      className="
+        cursor-pointer
+        hover:text-yellow-400
+      "
+    >
+      🏢 {q}
+      {" "}
+      <span className="text-yellow-400">
+        ({q.company})
+      </span>
+    </li>
+  )
+)}
+        </ul>
+      </div>
+
+    </div>
+
+    {selectedQuestion && (
+      <div className="
+        mt-10
+        bg-white/5
+        border
+        border-yellow-500/20
+        rounded-3xl
+        p-8
+      ">
+
+        <h2 className="
+          text-2xl
+          font-bold
+          text-yellow-400
+          mb-4
+        ">
+          AI Mock Interview
+        </h2>
+
+        <p className="mb-4 text-gray-300">
+          {selectedQuestion}
+        </p>
+
+        <textarea
+          value={answer}
+          onChange={(e) =>
+            setAnswer(e.target.value)
+          }
+          placeholder="Type your answer here..."
+          className="
+            w-full
+            h-40
+            bg-black/40
+            border
+            border-yellow-500/20
+            rounded-xl
+            p-4
+            text-white
+          "
+        />
+
+        <button
+          onClick={handleInterviewEvaluation}
+          className="
+            mt-4
+            px-8
+            py-3
+            rounded-xl
+            font-semibold
+            bg-linear-to-r
+            from-yellow-500
+            to-amber-600
+          "
+        >
+          Submit Answer
+        </button>
+
+      </div>
+    )}
+    {interviewResult &&
+    interviewResult.evaluation && (
+      <div className="mt-10 bg-white/5 border border-yellow-500/20 rounded-3xl p-8">
+        <h2 className="text-2xl font-bold text-yellow-400 mb-4">
+          Interview Evaluation
+        </h2>
+        <p className="text-gray-300">
+          {interviewResult.evaluation}
+        </p>
+      </div>
+    )}
+    {mockInterviewResult && (
+  <div className="
+    mt-8
+    bg-white/5
+    border
+    border-yellow-500/20
+    rounded-3xl
+    p-8
+  ">
+
+    <h2 className="
+      text-3xl
+      font-bold
+      text-green-400
+      mb-6
+    ">
+      Score:
+      {mockInterviewResult.score}/10
+    </h2>
+
+    <h3 className="
+      text-yellow-400
+      font-bold
+      mb-3
+    ">
+      Strengths
+    </h3>
+
+    <ul className="space-y-2">
+      {mockInterviewResult.strengths?.map(
+        (item: string, i: number) => (
+          <li key={i}>
+            ✅ {item}
+          </li>
+        )
+      )}
+    </ul>
+
+    <h3 className="
+      mt-6
+      text-yellow-400
+      font-bold
+      mb-3
+    ">
+      Improvements
+    </h3>
+
+    <ul className="space-y-2">
+      {mockInterviewResult.improvements?.map(
+        (item: string, i: number) => (
+          <li key={i}>
+            💡 {item}
+          </li>
+        )
+      )}
+    </ul>
+
+    <h3 className="
+      mt-6
+      text-yellow-400
+      font-bold
+      mb-3
+    ">
+      AI Feedback
+    </h3>
+
+    <p className="text-gray-300">
+      {mockInterviewResult.feedback}
+    </p>
+
+  </div>
+)}
+
   </div>
 )}
   

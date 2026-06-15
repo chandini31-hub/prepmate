@@ -14,6 +14,9 @@ const {
   rewriteResume,
   analyzeJobMatch,
   generateRoadmap,
+  generateInterviewQuestions,
+  evaluateInterviewAnswer,
+  careerMentor,
 } = require("./gemini");
 
 console.log(
@@ -29,6 +32,26 @@ console.log(
 console.log(
   "rewriteResume:",
   typeof rewriteResume
+);
+
+console.log(
+  "analyzeJobMatch:",
+  typeof analyzeJobMatch
+);
+
+console.log(
+  "generateRoadmap:",
+  typeof generateRoadmap
+);
+
+console.log(
+  "generateInterviewQuestions:",
+  typeof generateInterviewQuestions
+);
+
+console.log(
+  "evaluateInterviewAnswer:",
+  typeof evaluateInterviewAnswer
 );
 
 const app = express();
@@ -154,9 +177,10 @@ parsed.score = score;
 console.log("FINAL RESULT:");
 console.log(parsed);
 
-return res.json({
+res.json({
   success: true,
   result: parsed,
+  resumeText,
 });
       
     } catch (error) {
@@ -193,10 +217,12 @@ app.post(
           pdfData.text
         );
 
-      return res.json({
-        success: true,
-        resume: improvedResume,
-      });
+      return
+       res.json({
+  success: true,
+  result: parsed,
+  resumeText: resumeText,
+});
 
     } catch (error) {
       console.error(error);
@@ -318,12 +344,18 @@ app.post(
         );
 
       const cleaned = roadmap
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
 
-      const parsed =
-        JSON.parse(cleaned);
+console.log(
+  "RAW ROADMAP RESPONSE:"
+);
+
+console.log(cleaned);
+
+const parsed =
+  JSON.parse(cleaned);
 
       res.json({
         success: true,
@@ -337,6 +369,127 @@ app.post(
         error: error.message,
       });
     }
+  }
+);
+app.post(
+  "/interview-questions",
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      const dataBuffer =
+        fs.readFileSync(req.file.path);
+
+      const pdfData =
+        await pdf(dataBuffer);
+
+      const resumeText =
+        pdfData.text;
+
+      const jobDescription =
+        req.body.jobDescription;
+
+      const questions =
+  await generateInterviewQuestions(
+    resumeText,
+    jobDescription
+  );
+
+const cleaned = questions
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+console.log(
+  "RAW INTERVIEW RESPONSE:"
+);
+
+console.log(cleaned);
+
+const parsed =
+  JSON.parse(cleaned);
+
+      res.json({
+        success: true,
+        result: parsed,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+app.post(
+  "/mock-interview",
+  async (req, res) => {
+    try {
+      const {
+        question,
+        answer,
+      } = req.body;
+
+      const result =
+        await evaluateInterviewAnswer(
+          question,
+          answer
+        );
+
+      const cleaned = result
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const parsed =
+        JSON.parse(cleaned);
+
+      res.json({
+  success: true,
+  result,
+  resumeText,
+});
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+app.post(
+  "/career-mentor",
+  async (req, res) => {
+
+    try {
+
+      const { question } =
+        req.body;
+
+      const result =
+        await careerMentor(
+          question
+        );
+
+      res.json({
+        success: true,
+        result,
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      res.status(500).json({
+        error:
+          "Career Mentor Failed",
+      });
+
+    }
+
   }
 );
 
