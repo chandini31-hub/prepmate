@@ -197,7 +197,13 @@ ${jobDescription}
 
 Generate realistic interview QUESTIONS.
 
-Return JSON:
+Return ONLY valid JSON.
+
+Do not add explanations.
+Do not add markdown.
+Do not add text before or after JSON.
+
+Example:
 
 {
   "technical": [],
@@ -283,44 +289,128 @@ Score should be between 0 and 10.
 
   return completion.choices[0].message.content;
 }
-async function careerMentor(
-  question
-) {
+async function generateProjectIdeas(role) {
 
   const prompt = `
-You are an expert career mentor.
+Suggest ONE strong portfolio project.
 
-Answer in a practical way.
+Skills:
+${role}
 
-Include:
+Return ONLY valid JSON.
 
-1. Career advice
-2. Learning roadmap
-3. Resources
-4. Common mistakes
-5. Action plan
+{
+  "title":"",
+  "description":"",
+  "features":[
+    "",
+    "",
+    ""
+  ],
+  "techStack":[
+    "",
+    ""
+  ]
+}
 
-Question:
-
-${question}
+IMPORTANT:
+- features must contain at least 5 items
+- techStack must contain at least 3 items
+- never return empty arrays
 `;
 
   const completion =
     await groq.chat.completions.create({
-      model:
-        "openai/gpt-oss-120b",
+      model: "llama-3.1-8b-instant",
       messages: [
         {
           role: "user",
           content: prompt,
         },
       ],
+      temperature: 0.5,
     });
 
-  return completion
-    .choices[0]
-    .message
-    .content;
+  return completion.choices[0].message.content;
+}
+
+async function careerMentor(
+  question,
+  resumeText,
+  jobDescription
+) {
+  
+const prompt = `
+You are an expert career mentor.
+
+Return ONLY valid JSON.
+
+{
+  "summary": "",
+  "strengths": [],
+  "weaknesses": [],
+  "actionPlan": [
+    {
+      "title": "",
+      "description": "",
+      "tasks": [],
+      "deadline": ""
+    }
+  ]
+}
+  ActionPlan Rules:
+- Return exactly 5 action items
+- Each action item must contain:
+  - title
+  - description
+  - tasks
+  - deadline
+- description should be detailed
+- tasks should contain at least 4 steps
+Summary Rules:
+- Write a detailed career analysis.
+- Minimum 250 words.
+- Explain current profile.
+- Explain chances of cracking the target company.
+- Explain biggest strengths.
+- Explain biggest gaps.
+- Explain what must be improved.
+- Give realistic expectations.
+- Use complete paragraphs.
+
+Strengths:
+- Return 5 strengths
+
+Weaknesses:
+- Return 5 weaknesses
+
+ActionPlan:
+- Return 5 action items
+
+Resume:
+${resumeText}
+
+Question:
+${question}
+`;
+const completion =
+    await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama-3.1-8b-instant",
+    });
+
+  const cleaned =
+  completion.choices[0].message.content
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+return JSON.parse(cleaned);
 }
 
 module.exports = {
@@ -330,7 +420,8 @@ module.exports = {
   generateRoadmap,
   generateInterviewQuestions,
   evaluateInterviewAnswer,
-  careerMentor
+  careerMentor,
+  generateProjectIdeas,
 };
 
 

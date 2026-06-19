@@ -38,6 +38,15 @@ const [jobMatchResult, setJobMatchResult] =
   const [selectedQuestion,
   setSelectedQuestion] =
   useState("");
+  const [
+  projectSkills,
+  setProjectSkills
+] = useState("");
+
+const [
+  projectResult,
+  setProjectResult
+] = useState<(null) | any>(null);
 
 const [answer,
   setAnswer] =
@@ -72,7 +81,7 @@ const [
 
 const [mentorResponse,
   setMentorResponse] =
-  useState("");
+  useState<any>(null);
  const [
   resumeText,
   setResumeText
@@ -102,6 +111,7 @@ const [mentorResponse,
       );
 
       const data = await response.json();
+      console.log(data);
       console.log(
   "UPLOAD DATA:",
   data
@@ -133,6 +143,8 @@ if (data.success) {
     setLoading(false);
   };
   const handleRewrite = async () => {
+  console.log("REWRITE BUTTON CLICKED");
+
   if (!file) {
     alert("Upload a resume first");
     return;
@@ -142,6 +154,8 @@ if (data.success) {
   formData.append("resume", file);
 
   try {
+    console.log("Sending rewrite request...");
+
     const response = await fetch(
       "http://localhost:5001/rewrite",
       {
@@ -150,7 +164,11 @@ if (data.success) {
       }
     );
 
+    console.log("Status:", response.status);
+
     const data = await response.json();
+
+    console.log("REWRITE RESPONSE:", data);
 
     if (data.success) {
       setRewrittenResume(data.resume);
@@ -399,17 +417,61 @@ console.log(
       );
     }
   };
-  const handleCareerMentor =
+ const handleCareerMentor = async () => {
+  try {
+    const response = await fetch(
+      "http://localhost:5001/career-mentor",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          question: mentorQuestion,
+          resumeText,
+          jobDescription,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log(
+      "MENTOR RESPONSE:",
+      data
+    );
+
+    if (
+      data.success &&
+      data.result
+    ) {
+      console.log(data.result);
+      setMentorResponse(
+        data.result
+      );
+    } else {
+      alert(
+        "Mentor returned empty response"
+      );
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert(
+      "Career Mentor Failed"
+    );
+  }
+};
+const handleProjectGenerator =
   async () => {
-    console.log("QUESTION:", mentorQuestion);
-console.log("RESUME:", resumeText);
-console.log("JD:", jobDescription);
+    console.log("PROJECT BUTTON CLICKED");
 
     try {
 
       const response =
         await fetch(
-          "http://localhost:5001/career-mentor",
+          "http://localhost:5001/project-generator",
           {
             method: "POST",
             headers: {
@@ -417,8 +479,8 @@ console.log("JD:", jobDescription);
                 "application/json",
             },
             body: JSON.stringify({
-              question:
-                mentorQuestion,
+              skills:
+                projectSkills,
             }),
           }
         );
@@ -428,7 +490,7 @@ console.log("JD:", jobDescription);
 
       if (data.success) {
 
-        setMentorResponse(
+        setProjectResult(
           data.result
         );
 
@@ -478,18 +540,19 @@ return (
     <h3 className="
       text-2xl
       font-bold
-      text-green-400
+      text-yellow-400
     ">
       Average Score: {
-        (
-          interviewHistory.reduce(
-            (sum, item) =>
-              sum + item.score,
-            0
-          ) /
-          interviewHistory.length
-        ).toFixed(1)
-      } /10
+  interviewHistory.length > 0
+    ? (
+        interviewHistory.reduce(
+          (sum, item) =>
+            sum + Number(item.score || 0),
+          0
+        ) / interviewHistory.length
+      ).toFixed(1)
+    : "0.0"
+} /10
     </h3>
 
     <p className="mt-3 text-gray-300">
@@ -576,14 +639,17 @@ return (
   />
 
   <button
-    onClick={handleCareerMentor}
+    onClick={() => {
+    console.log("MENTOR BUTTON CLICKED");
+    handleCareerMentor();
+  }}
     className="
       mt-4
       px-8
       py-3
       rounded-xl
       font-semibold
-      bg-gradient-to-r
+      bg-linear-to-r
       from-yellow-500
       to-amber-600
       text-black
@@ -595,70 +661,241 @@ return (
 </div>
 
 {mentorResponse && (
-  <div className="
-    mt-6
-    bg-white/5
-    backdrop-blur-xl
-    border
-    border-yellow-500/20
-    rounded-3xl
-    p-8
-  ">
-    <h2 className="
-      text-2xl
-      font-bold
-      text-yellow-400
-      mb-4
-    ">
+  <div
+    className="
+      mt-8
+      bg-white/5
+      backdrop-blur-xl
+      border
+      border-yellow-500/20
+      rounded-3xl
+      p-8
+    "
+  >
+    <h2
+      className="
+        text-3xl
+        font-bold
+        text-yellow-400
+        mb-6
+      "
+    >
       Mentor Advice
     </h2>
 
-    <div className="
-      whitespace-pre-wrap
-      text-gray-300
-      leading-8
-    ">
-      {mentorResponse}
-    </div>
+    <div className="grid md:grid-cols-2 gap-6">
 
-  </div>
-)}
-{mentorResponse && (
+  <div className="bg-black/40 rounded-2xl p-5">
+    <h3 className="text-yellow-400 font-bold mb-3">
+      Summary
+    </h3>
 
-  <div className="
-    mt-8
-    bg-white/5
-    backdrop-blur-xl
-    border
-    border-yellow-500/20
-    rounded-3xl
-    p-8
-  ">
-
-    <h2 className="
-      text-3xl
-      font-bold
-      text-yellow-400
-      mb-6
-    ">
-      Mentor Advice
-    </h2>
-
-    <div className="
-      whitespace-pre-wrap
-      leading-8
-      text-gray-300
-    ">
-      {mentorResponse}
-    </div>
-
+    <p className="text-gray-300">
+      {
+    typeof mentorResponse.summary === "object"
+      ? mentorResponse.summary.description
+      : mentorResponse.summary
+  }
+    </p>
   </div>
 
-)}
+  <div className="bg-black/40 rounded-2xl p-5">
+    <h3 className="text-green-400 font-bold mb-3">
+      Strengths
+    </h3>
 
-{/* Upload Card */}
-<div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
+    <ul>
+      {mentorResponse.strengths?.map(
+  (item:any,index:number)=>(
+    <li key={index}>
+      ✅ {
+        typeof item === "object"
+          ? JSON.stringify(item)
+          : item
+      }
+    </li>
+  )
+)}
+  )
+)
+    </ul>
+  </div>
+
+  <div className="bg-black/40 rounded-2xl p-5">
+    <h3 className="text-red-400 font-bold mb-3">
+      Weaknesses
+    </h3>
+
+    <ul>
+      {mentorResponse.weaknesses?.map(
+  (item:any,index:number)=>(
+    <li key={index}>
+      ❌ {
+        typeof item === "object"
+          ? JSON.stringify(item)
+          : item
+      }
+    </li>
+  )
+)}
+    </ul>
+  </div>
+
+  <div className="bg-black/40 rounded-2xl p-5">
+  <h3 className="text-blue-400 font-bold mb-3">
+    Action Plan
+  </h3>
+
+  <ul>
+    {mentorResponse.actionPlan?.map(
+  (item:any,index:number)=>(
+    <div key={index} className="mb-4">
+      <p>🚀 {item.title}</p>
+      <p>{item.description}</p>
+      
+    </div>
+  )
+)}
+  </ul>
 </div>
+
+</div>
+  </div>
+)}
+
+
+{/* AI Project Generator */}
+
+<div className="
+mt-12
+bg-white/5
+backdrop-blur-xl
+border
+border-yellow-500/20
+rounded-3xl
+p-8
+">
+
+<h2 className="
+text-3xl
+font-bold
+text-yellow-400
+mb-6
+">
+AI Project Generator
+</h2>
+
+<textarea
+value={projectSkills}
+onChange={(e)=>
+setProjectSkills(e.target.value)
+}
+placeholder="
+Example:
+Java
+Spring Boot
+React
+MySQL
+"
+className="
+w-full
+h-32
+bg-black/40
+border
+border-yellow-500/20
+rounded-xl
+p-4
+text-white
+"
+/>
+
+<button
+onClick={handleProjectGenerator}
+className="
+mt-4
+px-8
+py-3
+rounded-xl
+font-semibold
+bg-linear-to-r
+from-yellow-500
+to-amber-600
+hover:scale-105
+transition
+"
+>
+Generate Project
+</button>
+
+</div>
+
+{projectResult && (
+
+<div className="
+mt-8
+bg-white/5
+backdrop-blur-xl
+border
+border-green-500/20
+rounded-3xl
+p-8
+">
+
+<h2 className="
+text-3xl
+font-bold
+text-green-400
+mb-4
+">
+{projectResult.title}
+</h2>
+
+<p className="text-gray-300">
+{projectResult.description}
+</p>
+
+<h3 className="
+mt-6
+font-bold
+text-yellow-400
+">
+Features
+</h3>
+
+<ul className="mt-2">
+  {projectResult?.features?.length > 0 &&
+projectResult.features.map((feature:string, index:number) => (
+    <li key={index}>
+      ✅ {feature}
+    </li>
+  ))}
+</ul>
+
+<h3 className="
+mt-6
+font-bold
+text-yellow-400
+">
+Tech Stack
+</h3>
+
+<div className="flex flex-wrap gap-2 mt-2">
+  {projectResult?.techStack?.length > 0 &&
+projectResult.techStack.map((tech:string, index:number) => (
+    <span
+      key={index}
+      className="px-3 py-1 rounded-full bg-yellow-500/20"
+    >
+      {tech}
+    </span>
+  ))}
+</div>
+
+</div>
+
+)}
+{/* Upload Card */}
+<div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10"></div>
 
         {/* Upload Card */}
         <div className="mt-14 bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-10">
@@ -915,7 +1152,7 @@ shadow-yellow-500/20
 
     <div className="flex flex-wrap gap-2 mb-6">
       {jobMatchResult.matchingSkills?.map(
-        (skill: string, index: number) => (
+        (skill: any, index: number) => (
           <span
             key={index}
             className="px-3 py-2 rounded-full bg-green-500/20 text-green-300"
@@ -932,7 +1169,7 @@ shadow-yellow-500/20
 
     <div className="flex flex-wrap gap-2 mb-6">
       {jobMatchResult.missingSkills?.map(
-        (skill: string, index: number) => (
+        (skill: any, index: number) => (
           <span
             key={index}
             className="px-3 py-2 rounded-full bg-red-500/20 text-red-300"
@@ -949,12 +1186,16 @@ shadow-yellow-500/20
 
     <ul className="space-y-2">
       {jobMatchResult.suggestions?.map(
-        (item: string, index: number) => (
-          <li key={index}>
-            💡 {item}
-          </li>
-        )
-      )}
+  (item: any, index: number) => (
+    <li key={index}>
+      💡 {
+        typeof item === "object"
+          ? `${item.title}: ${item.description}`
+          : item
+      }
+    </li>
+  )
+)}
     </ul>
 
   </div>
@@ -1046,10 +1287,10 @@ shadow-yellow-500/20
         cursor-pointer
         hover:text-yellow-400
       "
-    >🧠 {q}
+    >🧠 {typeof q === "string" ? q : q.question}
       {" "}
       <span className="text-yellow-400">
-        ({q.company})
+       
       </span>
     </li>
   )
@@ -1067,17 +1308,19 @@ shadow-yellow-500/20
     <li
       key={i}
       onClick={() =>
-        setSelectedQuestion(q)
+        setSelectedQuestion(
+          q
+        )
       }
       className="
         cursor-pointer
         hover:text-yellow-400
       "
     >
-      🧠 {q}
-      {" "}
+      🧠 {typeof q === "string" ? q : q.question}
+
       <span className="text-yellow-400">
-        ({q.company})
+       
       </span>
     </li>
   )
@@ -1103,10 +1346,9 @@ shadow-yellow-500/20
         hover:text-yellow-400
       "
     >
-      🤝 {q}
-      {" "}
+      🧠{typeof q === "string" ? q : q.question}
       <span className="text-yellow-400">
-        ({q.company})
+       
       </span>
     </li>
   )
@@ -1132,10 +1374,10 @@ shadow-yellow-500/20
         hover:text-yellow-400
       "
     >
-      🚀 {q}
+      🚀 {typeof q === "string" ? q : q.question}
       {" "}
       <span className="text-yellow-400">
-        ({q.company})
+        
       </span>
     </li>
   )
@@ -1160,10 +1402,9 @@ shadow-yellow-500/20
         hover:text-yellow-400
       "
     >
-      🏢 {q}
-      {" "}
+      🧠 {typeof q === "string" ? q : q.question}
       <span className="text-yellow-400">
-        ({q.company})
+      
       </span>
     </li>
   )
@@ -1192,9 +1433,9 @@ shadow-yellow-500/20
           AI Mock Interview
         </h2>
 
-        <p className="mb-4 text-gray-300">
-          {selectedQuestion}
-        </p>
+        <h3 className="mb-4 text-gray-300">
+  {selectedQuestion}
+</h3>
 
         <textarea
           value={answer}
@@ -1500,6 +1741,7 @@ shadow-yellow-500/20
         )}
 
       </div>
-    </div>
+     </div>
+  
   );
 }

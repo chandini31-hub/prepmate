@@ -1,13 +1,13 @@
 const PDFDocument = require("pdfkit");
 const path = require("path");
-
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const pdf = require("pdf-parse");
 const fs = require("fs");
+const pdfParse = require("pdf-parse");
+const pdfData = await pdfParse(dataBuffer);
 
 const {
   analyzeResume,
@@ -17,6 +17,7 @@ const {
   generateInterviewQuestions,
   evaluateInterviewAnswer,
   careerMentor,
+  generateProjectIdeas,
 } = require("./gemini");
 
 console.log(
@@ -205,33 +206,46 @@ app.post(
   "/rewrite",
   upload.single("resume"),
   async (req, res) => {
-    try {
-      const dataBuffer =
-        fs.readFileSync(req.file.path);
+    console.log("REWRITE ROUTE HIT");
+console.log(req.file);
 
-      const pdfData =
-        await pdf(dataBuffer);
+    try {
+      console.log("READING PDF...");
+
+      const dataBuffer = fs.readFileSync(
+  req.file.path
+);
+
+const pdfData = await pdf(
+  dataBuffer
+);
+
+const resumeText = pdfData.text;
+        console.log("CALLING AI...");
 
       const improvedResume =
         await rewriteResume(
-          pdfData.text
+          resumeText
         );
 
-      return
-       res.json({
-  success: true,
-  result: parsed,
-  resumeText: resumeText,
-});
+      console.log("AI RESPONSE:");
+console.log(improvedResume);
+
+      res.json({
+        success: true,
+        resume: improvedResume,
+      });
 
     } catch (error) {
-      console.error(error);
 
-      return res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
+  console.error("REWRITE ERROR:");
+  console.error(error);
+
+  res.status(500).json({
+    success: false,
+    error: error.message,
+  });
+}
   }
 );
 app.post(
@@ -261,8 +275,22 @@ app.post(
         .replace(/```/g, "")
         .trim();
 
-      const parsed = JSON.parse(cleaned);
+      console.log("RAW AI RESPONSE:");
+console.log(cleaned);
 
+let parsed;
+
+try {
+  parsed = JSON.parse(cleaned);
+} catch (err) {
+  console.log("INVALID JSON FROM AI");
+  console.log(cleaned);
+
+  return res.status(500).json({
+    success: false,
+    error: "AI returned invalid JSON",
+  });
+}
       return res.json({
         success: true,
         result: parsed,
@@ -441,14 +469,15 @@ app.post(
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
+        console.log(result);
 
       const parsed =
         JSON.parse(cleaned);
 
       res.json({
   success: true,
-  result,
-  resumeText,
+  result:parsed,
+  
 });
     } catch (error) {
       console.error(error);
@@ -465,27 +494,119 @@ app.post(
   async (req, res) => {
 
     try {
+      console.log("CAREER MENTOR ROUTE HIT");
 
-      const { question } =
+      const { question,
+        resumeText,
+        jobDescription
+       } =
         req.body;
 
       const result =
-        await careerMentor(
-          question
-        );
+  await careerMentor(
+    question,
+    resumeText,
+    jobDescription
+  );
+
+console.log(
+  "CAREER MENTOR RESULT:"
+);
+console.log(result);
+
+res.json({
+  success: true,
+  result,
+});
+
+    } catch (error) {
+  console.error("CAREER MENTOR ERROR:");
+  console.error(error);
+
+  return res.status(500).json({
+    success: false,
+    error: error.message,
+  });
+}
+
+  }
+);
+app.post(
+  "/project-generator",
+  async (req, res) => {
+
+    try {
+
+      console.log(
+        "PROJECT GENERATOR ROUTE HIT"
+      );
+
+      const { skills } =
+        req.body;
+        console.log("SKILLS:", skills);
+const result =
+  await generateProjectIdeas(skills);
+
+console.log("RAW PROJECT RESPONSE:");
+console.log(result);
+
+const cleaned =
+  result
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+const start =
+  cleaned.indexOf("{");
+
+const end =
+  cleaned.lastIndexOf("}");
+
+const jsonString =
+  cleaned.substring(
+    start,
+    end + 1
+  );
+
+console.log("EXTRACTED JSON:");
+console.log(jsonString);
+
+const parsed = JSON.parse(jsonString);
+
+if (!parsed.features) {
+  parsed.features = [
+    "User Authentication",
+    "Responsive UI",
+    "Database Integration",
+    "API Integration",
+    "Deployment"
+  ];
+}
+
+if (!parsed.techStack) {
+  parsed.techStack = [
+    "HTML",
+    "CSS",
+    "JavaScript"
+  ];
+}
 
       res.json({
         success: true,
-        result,
+        result: parsed,
       });
 
     } catch (error) {
 
+      console.error(
+        "PROJECT GENERATOR ERROR:"
+      );
+
       console.error(error);
 
       res.status(500).json({
-        error:
-          "Career Mentor Failed",
+        success: false,
+        error: error.message,
       });
 
     }
