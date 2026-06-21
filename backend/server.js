@@ -6,8 +6,8 @@ const cors = require("cors");
 const multer = require("multer");
 const pdf = require("pdf-parse");
 const fs = require("fs");
-const pdfParse = require("pdf-parse");
-const pdfData = await pdfParse(dataBuffer);
+
+
 
 const {
   analyzeResume,
@@ -18,6 +18,7 @@ const {
   evaluateInterviewAnswer,
   careerMentor,
   generateProjectIdeas,
+  generateCompanyPrep,
 } = require("./gemini");
 
 console.log(
@@ -25,37 +26,12 @@ console.log(
   process.env.GROQ_API_KEY?.slice(0, 10)
 );
 
-console.log(
-  "analyzeResume:",
-  typeof analyzeResume
-);
 
-console.log(
-  "rewriteResume:",
-  typeof rewriteResume
-);
-
-console.log(
-  "analyzeJobMatch:",
-  typeof analyzeJobMatch
-);
-
-console.log(
-  "generateRoadmap:",
-  typeof generateRoadmap
-);
-
-console.log(
-  "generateInterviewQuestions:",
-  typeof generateInterviewQuestions
-);
-
-console.log(
-  "evaluateInterviewAnswer:",
-  typeof evaluateInterviewAnswer
-);
 
 const app = express();
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
 
 app.use(cors());
 app.use(express.json());
@@ -78,7 +54,11 @@ const upload = multer({ storage });
 app.get("/", (req, res) => {
   res.send("PrepMate Backend Running");
 });
-
+app.get("/health", (req,res)=>{
+  res.json({
+    status: "ok"
+  });
+});
 /* =========================
    RESUME ANALYSIS
 ========================= */
@@ -94,37 +74,23 @@ app.post(
         fs.readFileSync(req.file.path);
 
       const pdfData = await pdf(dataBuffer);
+      fs.unlinkSync(req.file.path);
 
       const resumeText = pdfData.text;
 
-      console.log(
-        "Resume length:",
-        resumeText.length
-      );
-
-      console.log(
-        "Resume preview:"
-      );
-
-      console.log(
-        resumeText.substring(0, 300)
-      );
+      
 
       const analysis =
         await analyzeResume(resumeText);
 
-      console.log(
-        "Raw AI response:"
-      );
-
-      console.log(analysis);
+     
 
       const cleaned = analysis
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
         console.log("CLEANED RESPONSE:");
-console.log(cleaned);
+        console.log(cleaned);
 
       let parsed = JSON.parse(cleaned);
 
@@ -219,6 +185,7 @@ console.log(req.file);
 const pdfData = await pdf(
   dataBuffer
 );
+fs.unlinkSync(req.file.path);
 
 const resumeText = pdfData.text;
         console.log("CALLING AI...");
@@ -228,8 +195,7 @@ const resumeText = pdfData.text;
           resumeText
         );
 
-      console.log("AI RESPONSE:");
-console.log(improvedResume);
+      
 
       res.json({
         success: true,
@@ -258,7 +224,7 @@ app.post(
       );
 
       const pdfData = await pdf(dataBuffer);
-
+      fs.unlinkSync(req.file.path);
       const resumeText = pdfData.text;
 
       const jobDescription =
@@ -358,6 +324,7 @@ app.post(
 
       const pdfData =
         await pdf(dataBuffer);
+        fs.unlinkSync(req.file.path);
 
       const resumeText =
         pdfData.text;
@@ -409,6 +376,7 @@ app.post(
 
       const pdfData =
         await pdf(dataBuffer);
+        fs.unlinkSync(req.file.path);
 
       const resumeText =
         pdfData.text;
@@ -547,8 +515,7 @@ app.post(
 const result =
   await generateProjectIdeas(skills);
 
-console.log("RAW PROJECT RESPONSE:");
-console.log(result);
+
 
 const cleaned =
   result
@@ -568,8 +535,7 @@ const jsonString =
     end + 1
   );
 
-console.log("EXTRACTED JSON:");
-console.log(jsonString);
+
 
 const parsed = JSON.parse(jsonString);
 
@@ -611,6 +577,94 @@ if (!parsed.techStack) {
 
     }
 
+  }
+);
+app.post(
+  "/company-prep",
+  async (req, res) => {
+
+    try {
+
+      const {
+        company,
+        role
+      } = req.body;
+
+      const result =
+        await generateCompanyPrep(
+          company,
+          role
+        );
+
+      const cleaned = result
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+const parsed = JSON.parse(cleaned);
+
+parsed.interviewRounds =
+  parsed.interviewRounds?.length
+    ? parsed.interviewRounds
+    : [
+        {
+          round: "Technical Round",
+          description:
+            "Core technical assessment"
+        }
+      ];
+
+parsed.tips =
+  parsed.tips?.length
+    ? parsed.tips
+    : [
+        {
+          tip: "Practice Daily",
+          description:
+            "Solve interview questions regularly"
+        }
+      ];
+      parsed.resources =
+  parsed.resources?.length
+    ? parsed.resources
+    : [
+        {
+          resource: "LeetCode",
+          description:
+            "Practice coding questions"
+        }
+      ];
+
+parsed.importantTopics =
+  parsed.importantTopics?.length
+    ? parsed.importantTopics
+    : [
+        {
+          topic: "Data Structures",
+          description:
+            "Arrays Trees Graphs"
+        }
+      ];
+
+res.json({
+  success: true,
+  result: parsed,
+});
+      
+
+    } catch (error) {
+
+      console.error(
+        "COMPANY PREP ERROR:"
+      );
+
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
   }
 );
 

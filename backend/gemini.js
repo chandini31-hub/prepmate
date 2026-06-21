@@ -60,6 +60,7 @@ return response;
 }
 
 async function rewriteResume(text) {
+  console.log("rewriteResume called");
 const prompt = `
 You are an expert ATS resume writer.
 
@@ -90,6 +91,8 @@ content: prompt,
 ],
 temperature: 0.4,
 });
+console.log("Groq response received");
+
 
 return completion.choices[0].message.content;
 }
@@ -412,6 +415,70 @@ const completion =
 
 return JSON.parse(cleaned);
 }
+async function generateCompanyPrep(
+  company,
+  role
+) {
+
+  const prompt = `
+Generate interview preparation data.
+
+Company: ${company}
+Role: ${role}
+
+Return ONLY valid JSON.
+
+{
+  "company":"",
+  "role":"",
+  "interviewRounds":[
+    {
+      "round":"",
+      "description":""
+    }
+  ],
+  "importantTopics":[
+    {
+      "topic":"",
+      "description":""
+    }
+  ],
+  "resources":[
+    {
+      "resource":"",
+      "description":""
+    }
+  ],
+  "tips":[
+    {
+      "tip":"",
+      "description":""
+    }
+  ]
+}
+
+IMPORTANT:
+- Give at least 4 interview rounds.
+- Give at least 6 important topics.
+- Give at least 5 resources.
+- Give at least 5 tips.
+- Never leave arrays empty.
+`;
+
+  const completion =
+    await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+    });
+
+  return completion.choices[0].message.content;
+}
 
 module.exports = {
   analyzeResume,
@@ -422,6 +489,7 @@ module.exports = {
   evaluateInterviewAnswer,
   careerMentor,
   generateProjectIdeas,
+  generateCompanyPrep
 };
 
 
