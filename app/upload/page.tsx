@@ -1,330 +1,443 @@
 "use client";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Upload,
+  Sparkles,
+  FileText,
+  ShieldCheck,
+  AlertTriangle,
+  Brain,
+  Lightbulb,
+  Target,
+  Briefcase,
+  Rocket,
+  Award,
+} from "lucide-react";
 
-import React, { useState } from "react";
-import { Sparkles, Upload, FileText, Video } from "lucide-react";
 
 export default function UploadPage() {
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [rewrittenResume, setRewrittenResume] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [resumeText, setResumeText] = useState("");
-
-  // Other feature states
+  const [rewrittenResume, setRewrittenResume] = useState("");
+  const [loading, setLoading] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
   const [jobMatchResult, setJobMatchResult] = useState<any>(null);
   const [roadmapResult, setRoadmapResult] = useState<any>(null);
-  const [interviewResult, setInterviewResult] = useState<any>(null);
   const [selectedQuestion, setSelectedQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [mentorQuestion, setMentorQuestion] = useState("");
-  const [mentorResponse, setMentorResponse] = useState<any>(null);
   const [projectSkills, setProjectSkills] = useState("");
   const [projectResult, setProjectResult] = useState<any>(null);
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [companyPrep, setCompanyPrep] = useState<any>(null);
-// // ==========================================
-  // HARD-ALIGNED CORE UI HANDLERS WITH EMULATED FALLBACKS
-  // ==========================================
-  const handleUpload = async () => {
-    if (!file) return alert("Please select a PDF");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [answer, setAnswer] = useState("");
+  const [interviewResult, setInterviewResult] = useState<any>(null);
+  const [mockInterviewResult, setMockInterviewResult] = useState<any>(null);
+  const [interviewHistory, setInterviewHistory] = useState<any[]>([]);
+  const [mentorQuestion, setMentorQuestion] = useState("");
+  const [mentorResponse, setMentorResponse] = useState<any>(null);
+  const [resumeText, setResumeText] = useState("");
+
+  useEffect(() => {
+    const history = JSON.parse(localStorage.getItem("interviewHistory") || "[]");
+    setInterviewHistory(history);
+  }, []);
+
+  async function handleUpload() {
+    if (!file) {
+      alert("Please select a PDF");
+      return;
+    }
     const formData = new FormData();
     formData.append("resume", file);
-    if (typeof setLoading === "function") setLoading(true);
-
+    setLoading(true);
     try {
-      const response = await fetch("http://localhost:5001/upload", { method: "POST", body: formData });
+      const response = await fetch("http://localhost:5001/upload", {
+        method: "POST",
+        body: formData,
+      });
       const data = await response.json();
       if (data.success) {
-        const parsedText = data.resumeText || "Candidate Profile";
-        if (typeof setResumeText === "function") setResumeText(parsedText);
-        localStorage.setItem("prepMate_resumeText", parsedText);
-        
-        const outputText = data.result?.suggestions || data.result || "Analysis complete!";
-        if (typeof setRewrittenResume === "function") setRewrittenResume(outputText);
-        alert("Resume analyzed successfully! All tools are now unlocked.");
+        setResult(data.result);
+        setResumeText(data.resumeText || "");
+      } else {
+        alert(data.error || "Something went wrong");
       }
     } catch (error) {
-      const fallbackText = "Candidate Profile: IT student focused on Data Science.";
-      if (typeof setResumeText === "function") setResumeText(fallbackText);
-      localStorage.setItem("prepMate_resumeText", fallbackText);
-      if (typeof setRewrittenResume === "function") setRewrittenResume("Consider adding performance certifications.");
-      alert("Resume analyzed successfully! All tools are now unlocked.");
-    } finally {
-      if (typeof setLoading === "function") setLoading(false);
+      console.error(error);
+      alert("Upload failed");
+    }
+    setLoading(false);
+  }
+
+  const handleRewrite = async () => {
+    if (!file) {
+      alert("Upload a resume first");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("resume", file);
+    try {
+      const response = await fetch("http://localhost:5001/rewrite", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setRewrittenResume(data.resume);
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Resume rewrite failed");
     }
   };
 
-  const getResumeContext = () => {
-    return resumeText || localStorage.getItem("prepMate_resumeText") || "Default Resume Context";
-  };
-
   const handleJobMatch = async () => {
-    const backup = { matchScore: 85, matchingSkills: ["React Framework Design"], missingSkills: ["Distributed Optimization"] };
+    if (!file) {
+      alert("Upload resume first");
+      return;
+    }
+    if (!jobDescription.trim()) {
+      alert("Enter job description");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+
     try {
       const response = await fetch("http://localhost:5001/job-match", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription, resumeText: getResumeContext() }),
+        body: formData,
       });
       const data = await response.json();
-      const target = data.success ? data.result : backup;
-      if (typeof setJobMatchResult === "function") setJobMatchResult(target);
-      else if (typeof setJobMatchResult === "function") (setJobMatchResult as any)(target);
-    } catch (e) {
-      if (typeof setJobMatchResult === "function") setJobMatchResult(backup);
-      else if (typeof setJobMatchResult === "function") (setJobMatchResult as any)(backup);
+      if (data.success) {
+        setJobMatchResult(data.result);
+        alert("Match Score: " + Math.round(data.result.matchScore * 100) + "%");
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Job Match Failed");
+    }
+  };
+
+  const handleInterviewEvaluation = async () => {
+    if (!selectedQuestion) {
+      alert("Select a question");
+      return;
+    }
+    if (!answer.trim()) {
+      alert("Enter your answer");
+      return;
+    }
+    try {
+      const response = await fetch("http://localhost:5001/mock-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: selectedQuestion, answer }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMockInterviewResult(data.result);
+        const history = JSON.parse(localStorage.getItem("interviewHistory") || "[]");
+        history.push({
+          question: selectedQuestion,
+          score: data.result.score,
+          timestamp: new Date().toISOString(),
+        });
+        localStorage.setItem("interviewHistory", JSON.stringify(history));
+        setInterviewHistory(history);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Interview Evaluation Failed");
     }
   };
 
   const handleRoadmap = async () => {
-    const backup = { title: "Data Systems Path", steps: [{ phase: "Phase 1", topic: "Database Architectures" }] };
+    if (!file) {
+      alert("Upload resume first");
+      return;
+    }
+    if (!jobDescription.trim()) {
+      alert("Enter job description");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+
     try {
       const response = await fetch("http://localhost:5001/roadmap", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: getResumeContext() }),
+        body: formData,
       });
       const data = await response.json();
-      if (typeof setRoadmapResult === "function") setRoadmapResult(data.success ? data.result : backup);
-    } catch (e) {
-      if (typeof setRoadmapResult === "function") setRoadmapResult(backup);
+      if (data.success) {
+        setRoadmapResult(data.result);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Roadmap generation failed");
+    }
+  };
+
+  const handleInterviewQuestions = async () => {
+    if (!file) {
+      alert("Upload resume first");
+      return;
+    }
+    if (!jobDescription.trim()) {
+      alert("Enter job description");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+
+    try {
+      const response = await fetch("http://localhost:5001/interview-questions", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setInterviewResult(data.result);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Interview Generation Failed");
     }
   };
 
   const handleCareerMentor = async () => {
-    const backup = "Focus on building open-source component libraries or file-sharing protocols.";
     try {
       const response = await fetch("http://localhost:5001/career-mentor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: typeof mentorQuestion !== "undefined" ? mentorQuestion : "" }),
+        body: JSON.stringify({ question: mentorQuestion, resumeText, jobDescription }),
       });
       const data = await response.json();
-      if (typeof setMentorResponse === "function") setMentorResponse(data.success ? data.result : backup);
-    } catch (e) {
-      if (typeof setMentorResponse === "function") setMentorResponse(backup);
+      if (data.success && data.result) {
+        setMentorResponse(data.result);
+      } else {
+        alert("Mentor returned empty response");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Career Mentor Failed");
     }
   };
 
-  const handleRewrite = async () => {
-    const activeText = getResumeContext();
-    if (!activeText) return;
-
-    if (typeof setLoading === "function") setLoading(true);
+  const handleProjectGenerator = async () => {
     try {
-      const response = await fetch("http://localhost:5001/rewrite", {
+      const response = await fetch("http://localhost:5001/project-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: activeText }),
+        body: JSON.stringify({ skills: projectSkills }),
       });
-      
       const data = await response.json();
-      console.log("Frontend received rewrite data:", data);
-
       if (data.success) {
-        // Universal parser: extracts the text whether it's in data.result, data.text, or raw data
-        const extractedText = data.result || data.text || (typeof data === "string" ? data : "");
-        
-        if (extractedText) {
-          if (typeof setRewrittenResume === "function") {
-            setRewrittenResume(extractedText);
-          }
-        } else {
-          alert("Backend responded successfully, but text content was empty.");
-        }
-      } else {
-        alert(data.error || "Failed to rewrite resume.");
+        setProjectResult(data.result);
       }
-    } catch (e) {
-      console.error("Frontend Rewrite Fetch Crash:", e);
-      alert("Network bridge connection interrupted.");
-    } finally {
-      if (typeof setLoading === "function") setLoading(false);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const handleInterviewQuestions = async () => {};
-  const handleProjectGenerator = async () => {};
-  const handleCompanyPrep = async () => {};
-  const getAverageScore = () => "6.7";
-  const handleInterviewEvaluation = () => {};
+  const handleCompanyPrep = async () => {
+    try {
+      const response = await fetch("http://localhost:5001/company-prep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company, role }),
+      });
+      const data = await response.json();
+      if (data.success && data.result) {
+        setCompanyPrep(data.result);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getAverageScore = () => {
+    if (interviewHistory.length === 0) return "0.0";
+    const sum = interviewHistory.reduce((acc, item) => acc + Number(item.score || 0), 0);
+    return (sum / interviewHistory.length).toFixed(1);
+  };
 
   return (
-  <div className="min-h-screen bg-black text-white relative overflow-hidden">
-    {/* Gold Glow */}
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#D4AF3720,transparent_45%)]"></div>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden p-6">
+      {/* Background Glows */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#D4AF3720,transparent_45%)]"></div>
+      <div className="absolute top-0 left-1/3 w-96 h-96 bg-yellow-500/10 blur-[140px] rounded-full"></div>
 
-    {/* Floating Blur */}
-    <div className="absolute top-0 left-1/3 w-96 h-96 bg-yellow-500/10 blur-[140px] rounded-full"></div>
-
-    <div className="flex gap-6 relative z-10 p-6">
-      
-      {/* PERFECT SIDEBAR (LEFT) */}
-      <div className="w-64 min-h-[calc(100vh-3rem)] bg-white/5 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-6 sticky top-6 self-start">
-        <h2 className="text-2xl font-bold text-yellow-400 mb-8">PrepMate</h2>
-        <div className="space-y-4">
-          {[
-            { id: "dashboard", label: "Dashboard" },
-            { id: "resume", label: "Resume Analysis" },
-            { id: "jobmatch", label: "Job Match" },
-            { id: "roadmap", label: "Roadmap" },
-            { id: "interview", label: "Interview Prep" },
-            { id: "careermatch", label: "Career Mentor" },
-            { id: "projects", label: "Projects" },
-            { id: "companyprep", label: "Company Prep" },
-          ].map((tab) => (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`cursor-pointer p-3 rounded-xl transition font-medium ${
-                activeTab === tab.id
-                  ? "bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/20"
-                  : "text-gray-300 hover:text-yellow-400 hover:bg-white/5"
-              }`}
-            >
-              {tab.label}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CLEAN WORKSPACE AREA (RIGHT) */}
-      <div className="flex-1 space-y-8">
-        
-        {/* Global Brand Header */}
-        <div className="text-center mt-4">
-          <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-5 py-2 rounded-full text-xs font-semibold tracking-wide">
-            <Sparkles size={14} />
-            AI Career Intelligence
+      <div className="flex gap-6 relative z-10">
+        {/* Sidebar */}
+        <div className="w-64 min-h-screen bg-linear-to-br
+from-black
+via-zinc-900
+to-black
+border border-yellow-500/20
+shadow-[0_0_25px_rgba(212,175,55,0.15)]
+hover:scale-105
+transition-all
+duration-300 backdrop-blur-xl rounded-3xl p-6 sticky top-6 self-start">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-8">PrepMate</h2>
+          <div className="space-y-4">
+            {[
+              { id: "dashboard", label: "Dashboard" },
+              { id: "resume", label: "Resume Analysis" },
+              { id: "jobmatch", label: "Job Match" },
+              { id: "roadmap", label: "Roadmap" },
+              { id: "interview", label: "Interview Prep" },
+              { id: "careermatch", label: "Career Mentor" },
+              { id: "projects", label: "Projects" },
+              { id: "companyprep", label: "Company Prep" },
+            ].map((tab) => (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`cursor-pointer p-3 rounded-xl transition font-medium ${
+                  activeTab === tab.id
+                    ? "bg-yellow-500 text-black font-bold"
+                    : "text-gray-300 hover:text-yellow-400"
+                }`}
+              >
+                {tab.label}
+              </div>
+            ))}
           </div>
-          <h1 className="text-6xl font-black mt-4 bg-linear-to-r from-yellow-200 via-yellow-400 to-yellow-600 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]">
-            PrepMate
-          </h1>
-          <p className="text-gray-400 mt-2 text-lg">Land Your Dream Job With AI</p>
         </div>
 
-        {/* Dynamic Workspace Container based on Selected Tab */}
-        <div className="mt-8">
+        {/* Main Workspace Area */}
+        <div className="flex-1 space-y-8">
+          {/* Header Block Always Visible */}
+          <div className="text-center mt-4">
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-5 py-2 rounded-full">
+              <Sparkles size={18} />
+              AI Career Intelligence
+            </div>
+            <h1 className="text-6xl font-black mt-4 bg-linear-to-r from-yellow-200 via-yellow-400 to-yellow-600 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]">
+              PrepMate
+            </h1>
+            <p className="text-gray-400 mt-2 text-lg">Land Your Dream Job With AI</p>
+          </div>
+
+          {/* Conditional Rendering base on Tabs */}
           {activeTab === "dashboard" && (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-    
-    {/* ATS Score Card */}
-    <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6 flex items-center justify-between hover:border-yellow-500/30 transition-all">
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-400">ATS Optimization Score</p>
-        <p className="text-4xl font-black text-white">82</p>
-        <span className="text-xs text-emerald-400 font-medium">↑ Highly Competitive</span>
+  <div className="space-y-8">
+    <h2 className="text-4xl font-bold text-yellow-400">
+      Dashboard
+    </h2>
+
+    <div className="grid md:grid-cols-4 gap-6">
+      <div className="bg-linear-to-br from-yellow-500/20 to-yellow-600/5 rounded-3xl p-6 border border-yellow-500/20">
+        <h3 className="text-gray-400">ATS Score</h3>
+        <p className="text-5xl font-bold text-yellow-400">
+          {result?.score || 0}
+        </p>
       </div>
-      <div className="relative w-16 h-16 flex items-center justify-center">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-          <path className="text-white/5" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          <path className="text-yellow-500" strokeWidth="3" strokeDasharray="82, 100" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-        </svg>
-        <span className="absolute text-xs font-bold text-yellow-400">82%</span>
+
+      <div className="bg-linear-to-br from-green-500/20 to-green-600/5 rounded-3xl p-6 border border-green-500/20">
+        <h3 className="text-gray-400">Job Match</h3>
+        <p className="text-5xl font-bold text-green-400">
+          {jobMatchResult?.matchScore || 0}%
+        </p>
+      </div>
+
+      <div className="bg-linear-to-br from-blue-500/20 to-blue-600/5 rounded-3xl p-6 border border-blue-500/20">
+        <h3 className="text-gray-400">Projects</h3>
+        <p className="text-5xl font-bold text-blue-400">
+          {projectResult ? 1 : 0}
+        </p>
+      </div>
+
+      <div className="bg-linear-to-br from-purple-500/20 to-purple-600/5 rounded-3xl p-6 border border-purple-500/20">
+        <h3 className="text-gray-400">Interview</h3>
+        <p className="text-5xl font-bold text-purple-400">
+          {mockInterviewResult?.score || 0}
+        </p>
       </div>
     </div>
+    {/* Quick Actions */}
+    <div className="grid md:grid-cols-3 gap-6">
 
-    {/* Skill Match Card */}
-    <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6 flex items-center justify-between hover:border-yellow-500/30 transition-all">
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-400">Target Role Core Match</p>
-        <p className="text-4xl font-black text-white">76%</p>
-        <span className="text-xs text-yellow-400 font-medium">Moderate alignment found</span>
+      <div
+        onClick={() => setActiveTab("resume")}
+        className="cursor-pointer rounded-3xl p-6 bg-yellow-500/10 border border-yellow-500/20 hover:scale-105 transition"
+      >
+        <div className="text-4xl mb-3">📄</div>
+        <h3 className="text-xl font-bold text-yellow-400">
+          Upload Resume
+        </h3>
+        <p className="text-gray-400 mt-2">
+          Analyze ATS score instantly
+        </p>
       </div>
-      <div className="relative w-16 h-16 flex items-center justify-center">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-          <path className="text-white/5" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          <path className="text-amber-500" strokeWidth="3" strokeDasharray="76, 100" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-        </svg>
-        <span className="absolute text-xs font-bold text-amber-400">76%</span>
+
+      <div
+        onClick={() => setActiveTab("jobmatch")}
+        className="cursor-pointer rounded-3xl p-6 bg-green-500/10 border border-green-500/20 hover:scale-105 transition"
+      >
+        <div className="text-4xl mb-3">🎯</div>
+        <h3 className="text-xl font-bold text-green-400">
+          Job Match
+        </h3>
+        <p className="text-gray-400 mt-2">
+          Compare resume with JD
+        </p>
       </div>
+
+      <div
+        onClick={() => setActiveTab("interview")}
+        className="cursor-pointer rounded-3xl p-6 bg-purple-500/10 border border-purple-500/20 hover:scale-105 transition"
+      >
+        <div className="text-4xl mb-3">🎤</div>
+        <h3 className="text-xl font-bold text-purple-400">
+          Interview Prep
+        </h3>
+        <p className="text-gray-400 mt-2">
+          Practice AI interviews
+        </p>
+      </div>
+
     </div>
-
-    {/* Resumes Managed Card */}
-    <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6 flex justify-between items-center hover:border-yellow-500/30 transition-all">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-gray-400">Resumes Processed</p>
-        <p className="text-5xl font-black text-yellow-400">3</p>
-      </div>
-      <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-yellow-400">
-        <FileText size={24} />
-      </div>
-    </div>
-
-    {/* Interviews Handled Card */}
-    <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6 flex justify-between items-center hover:border-yellow-500/30 transition-all">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-gray-400">Simulated Encounters</p>
-        <p className="text-5xl font-black text-yellow-400">5</p>
-      </div>
-      <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-yellow-400">
-        <FileText size={24} />
-      </div>
-    </div>
-
   </div>
 )}
 
           {activeTab === "resume" && (
             <div className="space-y-6">
               {/* Core Resume Upload card logic */}
-              {/* Sleek Custom File Upload Zone */}
-<div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 hover:border-yellow-500/40 transition-colors group relative">
-  <label className="flex flex-col items-center justify-center border-2 border-dashed border-yellow-500/20 group-hover:border-yellow-500/40 rounded-2xl p-10 cursor-pointer bg-black/20 transition-all">
-    
-    {/* Hidden Native Input */}
-    <input 
-      type="file" 
-      accept=".pdf" 
-      className="hidden" 
-      onChange={(e) => setFile(e.target.files?.[0] || null)} 
-    />
-    
-    <Upload size={48} className="text-yellow-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
-    
-    <h3 className="text-xl font-bold mb-1 text-white">Drag & Drop Resume</h3>
-    <p className="text-sm text-gray-400 mb-4">or <span className="text-yellow-400 underline font-medium">browse your files</span></p>
-    <span className="text-xs text-gray-500">Supports PDF format up to 10MB</span>
-
-    {/* Selected File Badge */}
-    {file && (
-      <div className="mt-6 flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in text-sm font-medium">
-        <FileText size={16} className="text-yellow-400" />
-        {file.name}
-      </div>
-    )}
-  </label>
-
-  {/* Action Buttons */}
-  <div className="flex justify-center gap-4 mt-6">
-    <button 
-      onClick={handleUpload} 
-      disabled={!file || loading}
-      className={`px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${
-        !file 
-          ? "bg-gray-800 text-gray-500 cursor-not-allowed" 
-          : "bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-500/10 active:scale-95"
-      }`}
-    >
-      {loading ? "Analyzing Engine Running..." : "Analyze Resume"}
-    </button>
-    
-    <button 
-      onClick={handleRewrite}
-      disabled={!file}
-      className={`px-6 py-2.5 rounded-xl font-semibold border transition-all flex items-center gap-2 ${
-        !file 
-          ? "border-gray-800 text-gray-600 cursor-not-allowed" 
-          : "border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/5 active:scale-95"
-      }`}
-    >
-      ✨ Rewrite with AI
-    </button>
-  </div>
-</div>
+              <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8">
+                <div className="flex flex-col items-center">
+                  <Upload size={50} className="text-yellow-400 mb-4" />
+                  <h3 className="text-2xl font-bold mb-2">Upload Resume</h3>
+                  <input type="file" accept=".pdf" className="mt-4 text-sm" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                  {file && <p className="text-green-400 mt-2 flex items-center gap-2"><FileText size={16}/> {file.name}</p>}
+                  
+                  <div className="flex gap-4 mt-6">
+                    <button onClick={handleUpload} className="px-6 py-2 rounded-xl bg-yellow-500 text-black font-semibold hover:scale-105 transition">
+                      {loading ? "Analyzing..." : "Analyze Resume"}
+                    </button>
+                    <button onClick={handleRewrite} className="px-6 py-2 rounded-xl border border-yellow-500/40 text-yellow-400 font-semibold hover:scale-105 transition">
+                      ✨ Rewrite with AI
+                    </button>
+                  </div>
+                </div>
+              </div>
               {rewrittenResume && (
                 <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6">
                   <h3 className="text-yellow-400 font-bold mb-4">Improved Draft</h3>
@@ -335,15 +448,15 @@ export default function UploadPage() {
           )}
 
           {activeTab === "jobmatch" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-yellow-400">Target Role Validation</h2>
+            <div className="bg-white/5 border border-blue-500/20 rounded-3xl p-8 space-y-4">
+              <h2 className="text-2xl font-bold text-blue-400">Target Role Validation</h2>
               <textarea
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 placeholder="Paste the Job Description profile here..."
-                className="w-full h-40 bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-yellow-500/50"
+                className="w-full h-40 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white"
               />
-              <button onClick={handleJobMatch} className="px-6 py-3 bg-linear-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold hover:scale-105 transition">
+              <button onClick={handleJobMatch} className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:scale-105 transition">
                 Check Core Compatibility
               </button>
 
@@ -368,21 +481,17 @@ export default function UploadPage() {
           )}
 
           {activeTab === "roadmap" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-yellow-400">Skill Acquisition Timeline</h2>
-              <button onClick={handleRoadmap} className="px-6 py-2 bg-linear-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl hover:scale-105 transition">
-                Generate Velocity Roadmap
-              </button>
-              <div className="space-y-4 mt-4">
-                {roadmapResult?.roadmap?.map((week: any, idx: number) => (
-                  <div key={idx} className="p-4 bg-black/30 rounded-xl border border-yellow-500/10">
-                    <h4 className="text-yellow-400 font-bold">{week.week}</h4>
-                    <ul className="list-disc list-inside mt-2 text-gray-300 text-sm space-y-1">
-                      {week.topics?.map((topic: string, i: number) => <li key={i}>{topic}</li>)}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+            <div className="bg-white/5 border border-purple-500/20 rounded-3xl p-8 space-y-4">
+              <h2 className="text-2xl font-bold text-purple-400">Skill Acquisition Timeline</h2>
+              <button onClick={handleRoadmap} className="px-6 py-2 bg-purple-500 text-white font-bold rounded-xl hover:scale-105 transition">Generate Velocity Roadmap</button>
+              {roadmapResult?.roadmap?.map((week: any, idx: number) => (
+                <div key={idx} className="p-4 bg-black/30 rounded-xl border border-purple-500/10">
+                  <h4 className="text-purple-300 font-bold">{week.week}</h4>
+                  <ul className="list-disc list-inside mt-2 text-gray-300 text-sm space-y-1">
+                    {week.topics?.map((topic: string, i: number) => <li key={i}>{topic}</li>)}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
 
@@ -392,7 +501,7 @@ export default function UploadPage() {
                 <h2 className="text-2xl font-bold text-yellow-400">Simulation Room</h2>
                 <span className="text-sm bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full">Avg Score: {getAverageScore()} / 10</span>
               </div>
-              <button onClick={handleInterviewQuestions} className="px-6 py-2 bg-linear-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl">Extract Evaluation Questions</button>
+              <button onClick={handleInterviewQuestions} className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">Extract Evaluation Questions</button>
               
               {interviewResult && (
                 <div className="grid md:grid-cols-3 gap-4 mt-4">
@@ -418,7 +527,7 @@ export default function UploadPage() {
                 <div className="mt-4 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl space-y-3">
                   <p className="text-sm font-semibold text-yellow-400">Active Prompt: "{selectedQuestion}"</p>
                   <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Type your optimal technical response..." className="w-full h-24 bg-black/60 rounded-xl p-3 text-sm text-white border border-white/10" />
-                  <button onClick={handleInterviewQuestions} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">Submit Response for Analysis</button>
+                  <button onClick={handleInterviewEvaluation} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">Submit Response for Analysis</button>
                 </div>
               )}
             </div>
@@ -427,10 +536,10 @@ export default function UploadPage() {
           {activeTab === "careermatch" && (
             <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
               <h2 className="text-2xl font-bold text-yellow-400">AI Context Mentor</h2>
-              <textarea value={mentorQuestion} onChange={(e) => setMentorQuestion(e.target.value)} placeholder="Ask targeted queries like 'What technical components should I scale up next given my current background?'" className="w-full h-32 bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-yellow-500/50" />
-              <button onClick={handleCareerMentor} className="px-6 py-3 bg-linear-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl">Consult Mentor</button>
+              <textarea value={mentorQuestion} onChange={(e) => setMentorQuestion(e.target.value)} placeholder="Ask targeted queries like 'What technical components should I scale up next given my current background?'" className="w-full h-32 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white" />
+              <button onClick={handleCareerMentor} className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl">Consult Mentor</button>
               {mentorResponse && (
-                <div className="p-4 bg-black/40 rounded-xl border border-white/5 mt-4 text-sm text-gray-300">
+                <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-sm text-gray-300">
                   {mentorResponse.summary && <p className="mb-2">{typeof mentorResponse.summary === "object" ? mentorResponse.summary.description : mentorResponse.summary}</p>}
                 </div>
               )}
@@ -440,8 +549,8 @@ export default function UploadPage() {
           {activeTab === "projects" && (
             <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
               <h2 className="text-2xl font-bold text-yellow-400">AI Project Blueprint Engine</h2>
-              <textarea value={projectSkills} onChange={(e) => setProjectSkills(e.target.value)} placeholder="Enter skill constraints (e.g. TypeScript, Next.js, Redis)" className="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-yellow-500/50" />
-              <button onClick={handleProjectGenerator} className="px-6 py-2 bg-linear-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl">Compile Architecture</button>
+              <textarea value={projectSkills} onChange={(e) => setProjectSkills(e.target.value)} placeholder="Enter skill constraints (e.g. TypeScript, Next.js, Redis)" className="w-full h-24 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white" />
+              <button onClick={handleProjectGenerator} className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">Compile Architecture</button>
               {projectResult && (
                 <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-4">
                   <h3 className="text-xl font-bold text-emerald-400 mb-2">{projectResult.title}</h3>
@@ -452,24 +561,23 @@ export default function UploadPage() {
           )}
 
           {activeTab === "companyprep" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-yellow-400">Target Enterprise Strategy</h2>
+            <div className="bg-white/5 border border-blue-500/20 rounded-3xl p-8 space-y-4">
+              <h2 className="text-2xl font-bold text-blue-400">Target Enterprise Strategy</h2>
               <div className="grid grid-cols-2 gap-4">
-                <input type="text" placeholder="Company Name" value={company} onChange={(e) => setCompany(e.target.value)} className="p-3 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-yellow-500/50" />
-                <input type="text" placeholder="Role (e.g., Engineer)" value={role} onChange={(e) => setRole(e.target.value)} className="p-3 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-yellow-500/50" />
+                <input type="text" placeholder="Company Name" value={company} onChange={(e) => setCompany(e.target.value)} className="p-3 rounded-xl bg-black/40 border border-white/10" />
+                <input type="text" placeholder="Role (e.g., Engineer)" value={role} onChange={(e) => setRole(e.target.value)} className="p-3 rounded-xl bg-black/40 border border-white/10" />
               </div>
-              <button onClick={handleCompanyPrep} className="px-6 py-2 bg-linear-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-xl">Extract Portal Intel</button>
+              <button onClick={handleCompanyPrep} className="px-6 py-2 bg-blue-500 text-white font-bold rounded-xl">Extract Portal Intel</button>
               {companyPrep && (
-                <div className="p-4 bg-black/40 rounded-xl border border-yellow-500/10 mt-4">
-                  <h3 className="text-lg font-bold text-yellow-400 mb-2">{companyPrep.company} Roadmap</h3>
+                <div className="p-4 bg-black/40 rounded-xl border border-blue-500/10 mt-4">
+                  <h3 className="text-lg font-bold text-blue-400 mb-2">{companyPrep.company} Roadmap</h3>
                   <p className="text-sm text-gray-400">Tracking criteria for: {companyPrep.role}</p>
                 </div>
               )}
             </div>
           )}
         </div>
-
       </div>
     </div>
-  </div>
-)};
+  );
+}
