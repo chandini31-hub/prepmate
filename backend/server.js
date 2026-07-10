@@ -1,5 +1,6 @@
 const pdf = require("pdf-parse");
 
+
 const {
   analyzeResume,
   rewriteResume,
@@ -9,15 +10,18 @@ const {
   careerMentor,
   generateProjectIdeas,
   generateCompanyPrep,
-  skillGapAnalyzer
+  skillGapAnalyzer,
+  generatePortfolio
 } = require("./gemini");
 
 
 const express = require("express");
 const cors = require("cors");
+const recommendProjects = require("./projectEngine");
 const multer = require("multer");
 const dotenv = require("dotenv");
 const fetch = require("node-fetch"); // Required if using Node version below 18
+
 
 dotenv.config();
 
@@ -103,30 +107,36 @@ const analysis = await analyzeResume(
   resumeText,
   targetRole
 );
-console.log("FINAL ANALYSIS:");
+console.log("========== BACKEND ==========");
+console.log(typeof analysis);
 console.log(analysis);
-console.log(JSON.parse(analysis));
 
-    res.json({
-      success: true,
-      result: JSON.parse(analysis),
-      resumeText
-    });
+const parsed = JSON.parse(analysis);
 
-  } catch (err) {
-    console.error(err);
-    console.log("UPLOAD RESPONSE:");
-console.log({
+console.log("PARSED:");
+console.dir(parsed, { depth: null });
+
+res.json({
   success: true,
-  result: JSON.parse(analysis),
+  result: parsed,
   resumeText
 });
 
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+res.json({
+  success: true,
+  result: analysis,
+  resumeText
+});
+
+  } catch (err) {
+  console.error("UPLOAD ERROR:");
+  console.error(err);
+
+  res.status(500).json({
+    success: false,
+    error: err.message
+  });
+}
 });
 // ==========================================
 // 2. RESUME PROFILE REWRITE ENDPOINT
@@ -318,6 +328,19 @@ await skillGapAnalyzer(
 resumeText,
 targetRole
 );
+const projects = recommendProjects(
+  targetRole,
+  result.missingSkills
+);
+
+console.log("PROJECT ENGINE OUTPUT:");
+console.dir(projects, { depth: null });
+
+result.recommendedProjects = recommendProjects(
+  targetRole,
+  result.missingSkills,
+  resumeText
+);
     
     console.dir(result, { depth: null });
 console.log(result);
@@ -332,6 +355,28 @@ console.log(JSON.stringify(result, null, 2));
   } catch (err) {
 
     console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+
+  }
+});
+app.post("/portfolio", async (req, res) => {
+  try {
+    const { resumeText } = req.body;
+
+    const result = await generatePortfolio(resumeText);
+
+    res.json({
+      success: true,
+      result,
+    });
+
+  } catch (err) {
+
+    console.error("Portfolio Error:", err);
 
     res.status(500).json({
       success: false,

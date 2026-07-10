@@ -14,6 +14,11 @@ import {
   Briefcase,
   Rocket,
   Award,
+  GraduationCap,
+  Trophy,
+  FolderGit2,
+  Code2
+
 } from "lucide-react";
 
 
@@ -42,6 +47,8 @@ export default function UploadPage() {
   const [resumeText, setResumeText] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [roadmapDuration,setRoadmapDuration]=useState("90 Days");
+  const [portfolioResult, setPortfolioResult] = useState<any>(null);
+const [portfolioLoading, setPortfolioLoading] = useState(false);
 const [customDays, setCustomDays] = useState("");
 const router = useRouter();
 
@@ -73,11 +80,17 @@ const router = useRouter();
 
     const text = await response.text();
 
-    console.log("RAW RESPONSE:");
-    console.log(text);
+console.log("SERVER RESPONSE:");
+console.log(text);
 
     const data = JSON.parse(text);
+    console.log("UPLOAD RESPONSE:");
+console.log(data);
+console.log("RESULT:");
+console.log(data.result);
 
+console.log("ATS:");
+console.log(data.result?.atsScore);
     console.log("PARSED DATA:");
     console.log(data);
 
@@ -117,80 +130,6 @@ const router = useRouter();
     }
   };
 
-  const handleJobMatch = async () => {
-    if (!file) {
-      alert("Upload resume first");
-      return;
-    }
-    if (!jobDescription.trim()) {
-      alert("Enter job description");
-      return;
-    }
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("jobDescription", jobDescription);
-
-    try {
-      const response = await fetch(
-  "http://localhost:5001/job-match",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      resumeText,
-      jobDescription,
-    }),
-  }
-);
-      const data = await response.json();
-      if (data.success) {
-        setJobMatchResult(data.result);
-        alert("Match Score: " + Math.round(data.result.matchScore * 100) + "%");
-      } else {
-        alert(data.error);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Job Match Failed");
-    }
-  };
-
-  const handleInterviewEvaluation = async () => {
-    if (!selectedQuestion) {
-      alert("Select a question");
-      return;
-    }
-    if (!answer.trim()) {
-      alert("Enter your answer");
-      return;
-    }
-    try {
-      const response = await fetch("http://localhost:5001/mock-interview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: selectedQuestion, answer }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setMockInterviewResult(data.result);
-        const history = JSON.parse(localStorage.getItem("interviewHistory") || "[]");
-        history.push({
-          question: selectedQuestion,
-          score: data.result.score,
-          timestamp: new Date().toISOString(),
-        });
-        localStorage.setItem("interviewHistory", JSON.stringify(history));
-        setInterviewHistory(history);
-      } else {
-        alert(data.error);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Interview Evaluation Failed");
-    }
-  };
 
   const handleRoadmap = async () => {
     if (!file) {
@@ -229,78 +168,11 @@ const router = useRouter();
     }
   };
 
-  const handleInterviewQuestions = async () => {
-    if (!file) {
-      alert("Upload resume first");
-      return;
-    }
-    if (!jobDescription.trim()) {
-      alert("Enter job description");
-      return;
-    }
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("jobDescription", jobDescription);
+  
 
-    try {
-      const response = await fetch(
-  "http://localhost:5001/interview-questions",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      resumeText,
-    }),
-  }
-);
-      const data = await response.json();
-      if (data.success) {
-        setInterviewResult(data.result);
-      } else {
-        alert(data.error);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Interview Generation Failed");
-    }
-  };
+  
 
-  const handleCareerMentor = async () => {
-    try {
-      const response = await fetch("http://localhost:5001/career-mentor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: mentorQuestion, resumeText, jobDescription }),
-      });
-      const data = await response.json();
-      if (data.success && data.result) {
-        setMentorResponse(data.result);
-      } else {
-        alert("Mentor returned empty response");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Career Mentor Failed");
-    }
-  };
-
-  const handleProjectGenerator = async () => {
-    try {
-      const response = await fetch("http://localhost:5001/project-generator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills: projectSkills }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setProjectResult(data.result);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  
 
   const handleCompanyPrep = async () => {
     try {
@@ -319,41 +191,71 @@ const router = useRouter();
   };
   const handleCareerGap = async () => {
   try {
-    const response = await fetch(
-      "http://localhost:5001/career-gap",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resumeText,
-          targetRole,
-        }),
-      }
-    );
-    console.log(careerGapResult?.recommendedProjects);
+    const response = await fetch("http://localhost:5001/career-gap", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        resumeText,
+        targetRole,
+      }),
+    });
 
     const data = await response.json();
-console.log("CAREER GAP RESPONSE:");
-console.log(data);
-console.log(
-  JSON.stringify(data.result.recommendedProjects, null, 2)
-);
+
     if (data.success) {
       setCareerGapResult(data.result);
-      console.log("CAREER GAP RESULT");
-console.log(data.result);
+      console.log("CAREER GAP RESULT", data.result);
+console.log("PROJECTS", data.result.recommendedProjects);
     }
   } catch (error) {
     console.error(error);
   }
 };
-  const getAverageScore = () => {
-    if (interviewHistory.length === 0) return "0.0";
-    const sum = interviewHistory.reduce((acc, item) => acc + Number(item.score || 0), 0);
-    return (sum / interviewHistory.length).toFixed(1);
-  };
+    const handlePortfolio = async () => {
+
+  if (!resumeText) {
+    alert("Please analyze a resume first.");
+    return;
+  }
+
+  try {
+
+    setPortfolioLoading(true);
+
+    const response = await fetch(
+      "http://localhost:5001/portfolio",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          resumeText
+        })
+      }
+    );
+
+    const data = await response.json();
+    console.log("Portfolio Response:", data.result);
+console.log("Contact:", data.result.contact);
+    setPortfolioResult(data.result);
+    const result = data.result;
+    console.log("Portfolio:", result);
+console.log("Contact:", result.contact);
+
+    if (data.success) {
+      setPortfolioResult(data.result);
+    }
+
+  } finally {
+    setPortfolioLoading(false);
+  }
+
+};
+    
+  
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden p-6">
@@ -375,15 +277,14 @@ duration-300 backdrop-blur-xl rounded-3xl p-6 sticky top-6 self-start">
           <h2 className="text-2xl font-bold text-yellow-400 mb-8">PrepMate</h2>
           <div className="space-y-4">
             {[
-              { id: "dashboard", label: "Dashboard" },
-              { id: "resume", label: "Resume Analysis" },
-              { id: "gapanalyzer", label: "Skill Gap Analyzer" },
-              { id: "roadmap", label: "Roadmap" },
-              { id: "interview", label: "Interview Prep" },
-              { id: "careermatch", label: "Career Mentor" },
-              { id: "projects", label: "Projects" },
-              { id: "companyprep", label: "Company Prep" },
-            ].map((tab) => (
+  { id: "dashboard", label: "Dashboard" },
+  { id: "resume", label: "Resume Analysis" },
+  { id: "gapanalyzer", label: "Skill Gap Analyzer" },
+  { id: "roadmap", label: "Roadmap" },
+  { id: "companyprep", label: "Company Prep Pro" },
+  { id: "portfolio", label: "Portfolio Generator" },
+]
+            .map((tab) => (
               <div
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -420,34 +321,50 @@ duration-300 backdrop-blur-xl rounded-3xl p-6 sticky top-6 self-start">
       Dashboard
     </h2>
     <div className="grid md:grid-cols-4 gap-6">
-      <div className="bg-linear-to-br from-yellow-500/20 to-yellow-600/5 rounded-3xl p-6 border border-yellow-500/20">
-        <h3 className="text-gray-400">ATS Score</h3>
-        <p className="text-5xl font-bold text-yellow-400">
-         {result?.atsScore || 0}
-        </p>
-      </div>
 
-      <div className="bg-linear-to-br from-green-500/20 to-green-600/5 rounded-3xl p-6 border border-green-500/20">
-        <h3 className="text-gray-400">Job Match</h3>
-        <p className="text-5xl font-bold text-green-400">
-          {jobMatchResult?.matchScore || 0}%
-        </p>
-      </div>
+  {/* ATS Score */}
+  <div className="bg-linear-to-br from-yellow-500/20 to-yellow-600/5 rounded-3xl p-6 border border-yellow-500/20">
+    <h3 className="text-gray-400">ATS Score</h3>
 
-      <div className="bg-linear-to-br from-blue-500/20 to-blue-600/5 rounded-3xl p-6 border border-blue-500/20">
-        <h3 className="text-gray-400">Projects</h3>
-        <p className="text-5xl font-bold text-blue-400">
-          {projectResult ? 1 : 0}
-        </p>
-      </div>
+    <p className="text-5xl font-bold text-yellow-400">
+      {result?.atsScore || 0}
+    </p>
+  </div>
 
-      <div className="bg-linear-to-br from-purple-500/20 to-purple-600/5 rounded-3xl p-6 border border-purple-500/20">
-        <h3 className="text-gray-400">Interview</h3>
-        <p className="text-5xl font-bold text-purple-400">
-          {mockInterviewResult?.score || 0}
-        </p>
-      </div>
-    </div>
+  {/* Company Prep */}
+  <div className="bg-linear-to-br from-green-500/20 to-green-600/5 rounded-3xl p-6 border border-green-500/20">
+    <h3 className="text-gray-400">
+      Company Prep
+    </h3>
+
+    <p className="text-3xl font-bold text-green-400">
+      Ready
+    </p>
+  </div>
+
+  {/* Portfolio */}
+  <div className="bg-linear-to-br from-blue-500/20 to-blue-600/5 rounded-3xl p-6 border border-blue-500/20">
+    <h3 className="text-gray-400">
+      Portfolio
+    </h3>
+
+    <p className="text-3xl font-bold text-blue-400">
+      Not Generated
+    </p>
+  </div>
+
+  {/* Roadmap */}
+  <div className="bg-linear-to-br from-purple-500/20 to-purple-600/5 rounded-3xl p-6 border border-purple-500/20">
+    <h3 className="text-gray-400">
+      Roadmap
+    </h3>
+
+    <p className="text-3xl font-bold text-purple-400">
+      0%
+    </p>
+  </div>
+
+</div>
     {/* Quick Actions */}
     <div className="grid md:grid-cols-3 gap-6">
 
@@ -463,34 +380,38 @@ duration-300 backdrop-blur-xl rounded-3xl p-6 sticky top-6 self-start">
           Analyze ATS score instantly
         </p>
       </div>
-
       <div
-        onClick={() => setActiveTab("jobmatch")}
-        className="cursor-pointer rounded-3xl p-6 bg-green-500/10 border border-green-500/20 hover:scale-105 transition"
-      >
-        <div className="text-4xl mb-3">🎯</div>
-        <h3 className="text-xl font-bold text-green-400">
-          Job Match
-        </h3>
-        <p className="text-gray-400 mt-2">
-          Compare resume with JD
-        </p>
-      </div>
+  onClick={() => setActiveTab("companyprep")}
+  className="cursor-pointer rounded-3xl p-6 bg-green-500/10 border border-green-500/20 hover:scale-105 transition"
+>
+  <div className="text-4xl mb-3">🏢</div>
 
-      <div
-        onClick={() => setActiveTab("interview")}
-        className="cursor-pointer rounded-3xl p-6 bg-purple-500/10 border border-purple-500/20 hover:scale-105 transition"
-      >
-        <div className="text-4xl mb-3">🎤</div>
-        <h3 className="text-xl font-bold text-purple-400">
-          Interview Prep
-        </h3>
-        <p className="text-gray-400 mt-2">
-          Practice AI interviews
-        </p>
-      </div>
+  <h3 className="text-xl font-bold text-green-400">
+    Company Prep Pro
+  </h3>
 
-    </div>
+  <p className="text-gray-400 mt-2">
+    Prepare for any company interview
+  </p>
+</div>
+<div
+  onClick={() => setActiveTab("portfolio")}
+  className="cursor-pointer rounded-3xl p-6 bg-blue-500/10 border border-blue-500/20 hover:scale-105 transition"
+>
+  <div className="text-4xl mb-3">🌐</div>
+
+  <h3 className="text-xl font-bold text-blue-400">
+    Portfolio Generator
+  </h3>
+
+  <p className="text-gray-400 mt-2">
+    Generate portfolio from your resume
+  </p>
+</div>
+
+      
+
+      </div>
   </div>
 )}
 
@@ -739,48 +660,72 @@ Estimated Learning
 )
 )
    }   </div>
+   </div>
+    )}
+    <div className="bg-blue-950/30 rounded-xl p-5 mt-6">
+  <div className="text-center mb-10">
+  <h2 className="text-4xl font-bold text-yellow-400">
+    Recommended Projects
+  </h2>
 
-        <div className="bg-blue-500/10 p-4 rounded-xl">
-          <h3 className="text-blue-400 font-bold">
-            Recommended Projects
-          </h3>
-          <div className="bg-yellow-500/10 p-5 rounded-xl mt-5">
-  
-</div>
-{careerGapResult?.recommendedProjects?.map((project: any, index: number) => (
-  <div
-    key={index}
-    className="bg-black/30 rounded-xl p-5 mb-4 border border-blue-500/20"
-  >
-    <h3 className="text-lg font-bold text-blue-300">
-      🚀 {project.title}
-    </h3>
-
-    <p className="text-yellow-400 text-sm mt-1">
-      {project.difficulty}
-    </p>
-
-    <p className="text-gray-300 mt-3">
-      {project.description}
-    </p>
-
-    <div className="flex flex-wrap gap-2 mt-4">
-      {project.skills?.map((skill: string, i: number) => (
-        <span
-          key={i}
-          className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-sm"
-        >
-          {skill}
-        </span>
-      ))}
-    </div>
+  <div className="flex justify-center mt-3">
+    <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
   </div>
-))}
-        </div>
+</div>
 
-      </div>
-    )
-}
+  {careerGapResult?.recommendedProjects?.length > 0 ? (
+
+    <div className="space-y-4">
+
+      {careerGapResult.recommendedProjects.map(
+        (project: any, index: number) => (
+
+          <div
+            key={index}
+            className="bg-black/30 border border-yellow-500/20 rounded-xl p-4"
+          >
+
+            <h4 className="text-yellow-400 font-bold text-lg">
+              {project.title}
+            </h4>
+
+            <p className="text-gray-300 mt-2">
+              {project.description}
+            </p>
+
+            <p className="text-sm text-purple-300 mt-2">
+              Difficulty: {project.difficulty}
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {project.skills?.map((skill: string, i: number) => (
+                <span
+                  key={i}
+                  className="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-sm"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+
+          </div>
+
+        )
+      )}
+
+    </div>
+
+  ) : (
+
+    <p className="text-gray-400">
+      No recommended projects available.
+    </p>
+
+  )}
+</div>
+
+        
+        
 <div className="bg-blue-950/30 rounded-xl p-5 mt-6">
   <h3 className="text-blue-400 font-bold text-xl">
     Estimated Time to Become Job Ready
@@ -837,141 +782,11 @@ onChange={(e)=>setRoadmapDuration(e.target.value)}
             </div>
           )}
 
-          {activeTab === "interview" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-yellow-400">Simulation Room</h2>
-                <span className="text-sm bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full">Avg Score: {getAverageScore()} / 10</span>
-              </div>
-              <button onClick={handleInterviewQuestions} className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">Extract Evaluation Questions</button>
-              
-              {interviewResult && (
-                <div className="grid md:grid-cols-3 gap-4 mt-4">
-                  {["technical", "dsa", "behavioral"].map((category) => (
-                    <div key={category} className="bg-black/40 p-4 rounded-xl border border-white/5">
-                      <h4 className="text-yellow-400 font-bold capitalize mb-2">{category}</h4>
-                      <ul className="space-y-2 text-xs text-gray-300">
-                        {interviewResult[category]?.map((q: any, i: number) => {
-                          const questionText = typeof q === "string" ? q : q.question;
-                          return (
-                            <li key={i} onClick={() => setSelectedQuestion(questionText)} className="cursor-pointer hover:text-yellow-400 p-2 bg-white/5 rounded transition">
-                              👉 {questionText}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
+          
 
-              {selectedQuestion && (
-                <div className="mt-4 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl space-y-3">
-                  <p className="text-sm font-semibold text-yellow-400">Active Prompt: "{selectedQuestion}"</p>
-                  <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Type your optimal technical response..." className="w-full h-24 bg-black/60 rounded-xl p-3 text-sm text-white border border-white/10" />
-                  <button onClick={handleInterviewEvaluation} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">Submit Response for Analysis</button>
-                </div>
-              )}
-            </div>
-          )}
+          
 
-          {activeTab === "careermatch" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-yellow-400">AI Context Mentor</h2>
-              <textarea value={mentorQuestion} onChange={(e) => setMentorQuestion(e.target.value)} placeholder="Ask targeted queries like 'What technical components should I scale up next given my current background?'" className="w-full h-32 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white" />
-              <button onClick={handleCareerMentor} className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl">Consult Mentor</button>
-              {mentorResponse && (
-  <div className="space-y-6">
-
-    <div className="bg-black/40 p-5 rounded-xl">
-      <h3 className="text-yellow-400 font-bold mb-3">
-        Career Analysis
-      </h3>
-
-      <p className="text-gray-300 whitespace-pre-wrap">
-        {mentorResponse.summary}
-      </p>
-    </div>
-
-    <div className="grid md:grid-cols-2 gap-4">
-
-      <div className="bg-green-500/10 p-4 rounded-xl">
-        <h3 className="text-green-400 font-bold mb-3">
-          Strengths
-        </h3>
-
-        <ul className="space-y-2">
-          {mentorResponse.strengths?.map((item:any,i:number)=>(
-            <li key={i}>✅ {item}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="bg-red-500/10 p-4 rounded-xl">
-        <h3 className="text-red-400 font-bold mb-3">
-          Weaknesses
-        </h3>
-
-        <ul className="space-y-2">
-          {mentorResponse.weaknesses?.map((item:any,i:number)=>(
-            <li key={i}>❌ {item}</li>
-          ))}
-        </ul>
-      </div>
-
-    </div>
-
-    <div className="bg-yellow-500/10 p-5 rounded-xl">
-      <h3 className="text-yellow-400 font-bold mb-4">
-        Action Plan
-      </h3>
-
-      <div className="space-y-4">
-        {mentorResponse.actionPlan?.map((plan:any,index:number)=>(
-          <div
-            key={index}
-            className="bg-black/30 p-4 rounded-lg"
-          >
-            <h4 className="font-bold text-white">
-              {plan.title}
-            </h4>
-
-            <p className="text-gray-300 mt-2">
-              {plan.description}
-            </p>
-
-            <ul className="list-disc ml-6 mt-3 text-sm text-gray-400">
-              {plan.tasks?.map((task:string,i:number)=>(
-                <li key={i}>{task}</li>
-              ))}
-            </ul>
-
-            <div className="mt-3 text-yellow-400 text-sm">
-              Deadline: {plan.deadline}
-            </div>
-          </div>
-        ))}
-      </div>
-
-    </div>
-
-  </div>
-)}
-</div>)}
-
-          {activeTab === "projects" && (
-            <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-yellow-400">AI Project Blueprint Engine</h2>
-              <textarea value={projectSkills} onChange={(e) => setProjectSkills(e.target.value)} placeholder="Enter skill constraints (e.g. TypeScript, Next.js, Redis)" className="w-full h-24 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white" />
-              <button onClick={handleProjectGenerator} className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">Compile Architecture</button>
-              {projectResult && (
-                <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-4">
-                  <h3 className="text-xl font-bold text-emerald-400 mb-2">{projectResult.projectTitle}</h3>
-                  <p className="text-gray-300 text-sm">{projectResult.description}</p>
-                </div>
-              )}
-            </div>
-          )}
+          
 
           {activeTab === "companyprep" && (
             <div className="bg-white/5 border border-blue-500/20 rounded-3xl p-8 space-y-4">
@@ -994,7 +809,476 @@ onChange={(e)=>setRoadmapDuration(e.target.value)}
               )}
             </div>
           )}
+          {activeTab === "portfolio" && (
+  <div className="space-y-8">
+
+    <h2 className="text-4xl font-bold text-yellow-400">
+      Portfolio Generator
+    </h2>
+
+    <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8">
+
+      <h3 className="text-2xl font-bold mb-4">
+        AI Portfolio Generator
+      </h3>
+
+      <p className="text-gray-400 mb-6">
+        Generate a professional portfolio website directly from your resume.
+      </p>
+
+      <button
+  onClick={handlePortfolio}
+  className="px-6 py-3 rounded-xl bg-yellow-500 text-black font-semibold hover:bg-yellow-400 transition"
+>
+  {portfolioLoading ? "Generating..." : "Generate Portfolio"}
+</button>
+{portfolioResult && (
+  <>
+    {/* HERO */}
+
+    <div className="text-center py-10 border-b border-yellow-500/20">
+
+      <div className="w-36 h-36 rounded-full bg-yellow-500/20 mx-auto flex items-center justify-center text-5xl font-bold text-yellow-400">
+        {portfolioResult.name.charAt(0)}
+      </div>
+
+      <h1 className="text-5xl font-bold mt-6 text-yellow-400">
+        {portfolioResult.name}
+      </h1>
+
+      <h2 className="text-2xl text-gray-300 mt-2">
+        {portfolioResult.title}
+      </h2>
+
+      <p className="text-gray-400 mt-4 max-w-3xl mx-auto">
+        {portfolioResult.about}
+      </p>
+
+      <div className="flex justify-center gap-4 mt-8">
+        <button
+  onClick={() => {
+    if (!file) {
+      alert("No resume uploaded.");
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }}
+  className="bg-yellow-500 text-black px-6 py-3 rounded-xl"
+>
+  Download Resume
+</button>
+
+        {portfolioResult.github && (
+  <a
+    href={portfolioResult.github}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="border border-yellow-500 px-6 py-3 rounded-xl hover:bg-yellow-500 hover:text-black transition"
+  >
+    GitHub
+  </a>
+)}
+
+        {portfolioResult.linkedin && (
+  <a
+    href={portfolioResult.linkedin}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="border border-yellow-500 px-6 py-3 rounded-xl hover:bg-yellow-500 hover:text-black transition"
+  >
+    LinkedIn
+  </a>
+)}
+      </div>
+
+      
+  <div className="text-center mb-10">
+  <h2 className="text-4xl font-bold text-yellow-400">
+    Skills
+  </h2>
+
+  <div className="flex justify-center mt-3">
+    <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
+  </div>
+</div>
+
+  
+
+      <div className="flex flex-wrap gap-2 mt-4">
+        {portfolioResult.skills?.map((skill: string) => (
+          <span
+            key={skill}
+            className="px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30"
+          >
+            {skill}
+          </span>
+        ))}
+      </div>
+      {portfolioResult.projects?.length > 0 && (
+  <div className="mt-12">
+    <h2 className="text-3xl font-bold text-yellow-400 mb-6">
+      Projects
+    </h2>
+
+    <div className="grid md:grid-cols-2 gap-6">
+      {portfolioResult.projects.map((project: any, index: number) => (
+        <div
+  key={index}
+  tabIndex={0}
+  className="
+    bg-black/40
+    border border-yellow-500/20
+    rounded-2xl
+    p-6
+    transition-all
+    duration-300
+    cursor-pointer
+    hover:border-yellow-400
+    hover:shadow-[0_0_25px_rgba(234,179,8,0.25)]
+    hover:-translate-y-1
+    focus:outline-none
+    focus:border-yellow-400
+    focus:shadow-[0_0_25px_rgba(234,179,8,0.35)]
+  "
+>
+          <h3 className="text-2xl font-bold text-yellow-300">
+            {project.title}
+          </h3>
+
+          <p className="text-gray-400 mt-3">
+            {project.description}
+          </p>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {project.tech?.map((tech: string) => (
+              <span
+                key={tech}
+                className="px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
         </div>
+      ))}
+    </div>
+  </div>
+)}
+  {/* EXPERIENCE */}
+
+<div className="mt-16">
+
+<div className="text-center mb-10">
+  <h2 className="text-4xl font-bold text-yellow-400">
+    Experience
+  </h2>
+
+  <div className="flex flex-col items-center gap-8">
+    <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
+  </div>
+</div>
+
+<div className="flex flex-col items-center gap-8">
+
+{portfolioResult.experience?.length > 0 ? (
+
+portfolioResult.experience.map((exp: any, index: number) => (
+
+<div
+  key={index}
+  className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 w-full max-w-4xl hover:border-yellow-400 transition mx-auto"
+>
+
+<h3 className="text-2xl font-bold text-yellow-300">
+{exp.role}
+</h3>
+
+<p className="text-lg text-gray-300">
+{exp.company}
+</p>
+
+<p className="text-sm text-gray-500 mb-4">
+{exp.duration}
+</p>
+
+<p className="text-gray-300">
+{exp.description}
+</p>
+
+</div>
+
+))
+
+) : (
+
+<div 
+className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 max-w-3xl w-full transition-all duration-300 hover:border-yellow-400 hover:shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:-translate-y-1"
+>
+
+<p className="text-gray-400">
+No professional experience yet.
+</p>
+
+</div>
+
+)}
+{/* ================= EDUCATION ================= */}
+
+<div className="mt-20">
+
+  <div className="text-center mb-10">
+  <h2 className="text-4xl font-bold text-yellow-400">
+    Education
+  </h2>
+
+  <div className="flex justify-center mt-3">
+    <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
+  </div>
+</div>
+
+  <div className="flex justify-center">
+
+    {portfolioResult.education?.length > 0 ? (
+
+      <div className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 max-w-3xl w-full transition-all duration-300 hover:border-yellow-400 hover:shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:-translate-y-1">
+
+        {portfolioResult.education.map((edu: any, index: number) => (
+
+          <div key={index} className="text-center">
+
+            <div className="text-5xl mb-5">
+              🎓
+            </div>
+
+            <h3 className="text-3xl font-bold text-yellow-300">
+              {edu.degree}
+            </h3>
+
+            <p className="text-xl text-gray-300 mt-4">
+              {edu.institute}
+            </p>
+
+            <p className="text-gray-400 mt-3">
+              {edu.duration}
+            </p>
+
+            {edu.cgpa && (
+              <p className="text-yellow-400 mt-4 font-semibold">
+                CGPA : {edu.cgpa}
+              </p>
+            )}
+
+          </div>
+
+        ))}
+
+      </div>
+
+    ) : (
+
+      <p className="text-gray-500">
+        No education found.
+      </p>
+
+    )}
+
+  </div>
+
+</div>
+
+
+{/* ================= ACHIEVEMENTS ================= */}
+
+<div className="mt-20">
+
+  <div className="text-center mb-10">
+  <h2 className="text-4xl font-bold text-yellow-400">
+    Achievements
+  </h2>
+
+  <div className="flex justify-center mt-3">
+    <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
+  </div>
+</div>
+
+  <div className="flex flex-col items-center gap-8">
+
+    {portfolioResult.achievements?.length > 0 ? (
+
+      portfolioResult.achievements.map((achievement: any, index: number) => (
+
+        <div
+          key={index}
+          className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 w-full max-w-3xl hover:border-yellow-400 transition"
+        >
+
+          <div className="flex items-center gap-8">
+
+            <div className="text-6xl">
+              🏆
+            </div>
+
+            <div>
+
+              <h3 className="text-2xl font-bold text-yellow-300">
+                {achievement.name}
+              </h3>
+
+              <p className="text-gray-400 mt-2">
+                {achievement.issuer}
+              </p>
+
+              <p className="text-gray-500 mt-2">
+  {achievement.date}
+</p>
+
+<p className="text-gray-300 mt-4 leading-7">
+  {achievement.description}
+</p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      ))
+
+    ) : (
+
+      <p className="text-gray-500">
+        No achievements found.
+      </p>
+
+    )}
+
+  </div>
+
+</div>
+{/* ================= CONTACT ================= */}
+
+<div className="mt-20">
+
+  <div className="text-center mb-10">
+
+    <h2 className="text-4xl font-bold text-yellow-400">
+      Contact
+    </h2>
+
+    <div className="flex justify-center mt-3">
+      <div className="w-20 h-1 bg-yellow-400 rounded-full"></div>
+    </div>
+
+  </div>
+
+  <div className="flex justify-center">
+
+    <div className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 max-w-3xl w-full">
+
+      <div className="space-y-6">
+
+        <div>
+          <h3 className="text-yellow-300 text-xl font-semibold">
+            Email
+          </h3>
+
+          <p className="text-gray-300">
+            {portfolioResult.contact?.email || "Not Available"}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-yellow-300 text-xl font-semibold">
+            Phone
+          </h3>
+
+          <p className="text-gray-300">
+            {portfolioResult.contact?.phone || "Not Available"}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-yellow-300 text-xl font-semibold">
+            GitHub
+          </h3>
+
+          <a
+            href={portfolioResult.github}
+            target="_blank"
+            className="text-blue-400 underline"
+          >
+            {portfolioResult.github}
+          </a>
+        </div>
+
+        <div>
+          <h3 className="text-yellow-300 text-xl font-semibold">
+            LinkedIn
+          </h3>
+
+          <a
+            href={portfolioResult.linkedin}
+            target="_blank"
+            className="text-blue-400 underline"
+          >
+            {portfolioResult.linkedin}
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{/* ================= FOOTER ================= */}
+
+<footer className="mt-24 border-t border-yellow-500/20 py-10">
+
+  <div className="text-center">
+
+    <h2 className="text-2xl font-bold text-yellow-400">
+      Prepmate AI Portfolio
+    </h2>
+
+    <p className="text-gray-400 mt-4">
+      Designed & Generated by Prepmate AI
+    </p>
+
+    <p className="text-gray-500 mt-2 text-sm">
+      Empowering Students for Placements 🚀
+    </p>
+
+  </div>
+
+</footer>
+
+</div>
+
+</div>
+</div>
+
+
+
+
+  
+
+  </>
+)}
+    </div>
+
+  </div>
+)}
+      </div>
       </div>
     </div>
-  );}
+  )};

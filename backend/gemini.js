@@ -817,6 +817,168 @@ function recommendProjects(targetRole) {
 
   return [];
 }
+async function generatePortfolio(resumeText) {
+
+const prompt = `
+You are an expert portfolio generator.
+
+Generate a professional developer portfolio from this resume.
+
+Return ONLY valid JSON.
+
+JSON format:
+
+{
+  "name": "",
+  "title": "",
+  "about": "",
+  "github": "",
+  "linkedin": "",
+  "skills": [],
+  "projects": [
+    {
+      "title": "",
+      "description": "",
+      "tech": []
+    }
+  ],
+  "experience": [
+    {
+      "role": "",
+      "company": "",
+      "duration": "",
+      "description": ""
+    }
+  ],
+  "education": [
+    {
+      "degree": "",
+      "institute": "",
+      "duration": "",
+      "cgpa": ""
+    }
+  ],
+  "achievements": [
+    {
+      "name": "",
+      "issuer": "",
+      "date": "",
+      "description": ""
+    }
+  ],
+  "contact": {
+    "email": "",
+    "phone": ""
+  }
+}
+
+Rules:
+
+- Extract ONLY information present in the resume.
+- Do NOT invent any information.
+- Extract the actual email address from the resume.
+- Extract the actual phone number from the resume.
+- If email is missing, return "".
+- If phone is missing, return "".
+- Extract GitHub if available.
+- Extract LinkedIn if available.
+- Extract all projects.
+- Extract all experience.
+- Extract all education.
+- Extract all achievements.
+- Achievement descriptions should be 1-2 professional sentences.
+- Return ONLY valid JSON.
+
+Resume:
+
+${resumeText}
+`;
+
+try {
+
+const completion = await groq.chat.completions.create({
+
+model: "llama-3.1-8b-instant",
+
+messages: [
+{
+role: "user",
+content: prompt
+}
+],
+
+temperature: 0.3,
+
+response_format: {
+type: "json_object"
+}
+
+});
+const data = JSON.parse(
+  completion.choices[0].message.content
+);
+console.log("===== RESUME TEXT START =====");
+console.log(resumeText);
+console.log("===== RESUME TEXT END =====");
+// Extract email from resume text
+const emailMatch = resumeText.match(
+  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
+);
+
+// Extract Indian phone number
+const phoneMatch = resumeText.match(
+  /(\+91[\s-]?)?(\d[\d\s-]{9,14})/
+);
+
+if (!data.contact) {
+  data.contact = {};
+}
+
+data.contact.email = emailMatch ? emailMatch[0] : "";
+data.contact.phone = phoneMatch ? phoneMatch[0] : "";
+console.log("AI RAW OUTPUT:");
+console.log(completion.choices[0].message.content);
+
+console.log("PARSED OUTPUT:");
+console.log(data);
+console.log("CONTACT:", data.contact);
+
+
+return data;
+
+
+
+} catch (err) {
+
+console.error("Groq Portfolio Error:", err);
+
+if (
+err.status === 429 ||
+err.code === "rate_limit_exceeded"
+) {
+
+return {
+name: "AI Limit Reached",
+title: "",
+about:
+"Portfolio generation is temporarily unavailable because the free Groq API quota has been exhausted. Please try again later.",
+github: "",
+linkedin: "",
+skills: [],
+projects: [],
+experience: [],
+education: [],
+achievements: [],
+contact: {}
+};
+
+}
+
+throw err;
+
+}
+
+}
 module.exports = {
   analyzeResume,
   rewriteResume,
@@ -828,6 +990,7 @@ module.exports = {
   generateProjectIdeas,
   generateCompanyPrep,
   skillGapAnalyzer,
+  generatePortfolio
 };
 
 
