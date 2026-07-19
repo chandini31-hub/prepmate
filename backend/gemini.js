@@ -979,6 +979,75 @@ throw err;
 }
 
 }
+async function generateCompanyPrep(company, role) {
+
+const prompt = `
+
+You are an expert placement mentor.
+
+Generate a complete preparation guide.
+
+Company:
+${company}
+
+Role:
+${role}
+
+Return ONLY valid JSON.
+
+Format:
+
+{
+  "company": "",
+  "role": "",
+  "overview": "",
+  "hiringProcess": [],
+  "dsaTopics": [],
+  "coreSubjects": [],
+  "hrQuestions": [],
+  "technicalQuestions": [],
+  "roadmap": []
+}
+
+Rules:
+
+- Do NOT return markdown.
+- Return only JSON.
+- Hiring process should be ordered.
+- DSA topics should be most important first.
+- Include important CS subjects.
+- Include 10 HR questions.
+- Include 10 Technical questions.
+- Create a 30-day roadmap.
+
+`;
+
+const completion = await groq.chat.completions.create({
+
+model: "llama-3.1-8b-instant",
+
+messages: [
+
+{
+role: "user",
+content: prompt
+}
+
+],
+
+temperature: 0.3,
+
+response_format: {
+type: "json_object"
+}
+
+});
+
+return JSON.parse(
+completion.choices[0].message.content
+);
+
+}
 module.exports = {
   analyzeResume,
   rewriteResume,
@@ -990,7 +1059,8 @@ module.exports = {
   generateProjectIdeas,
   generateCompanyPrep,
   skillGapAnalyzer,
-  generatePortfolio
+  generatePortfolio,
+  generateCompanyPrep
 };
 
 

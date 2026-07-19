@@ -20,7 +20,7 @@ const cors = require("cors");
 const recommendProjects = require("./projectEngine");
 const multer = require("multer");
 const dotenv = require("dotenv");
-const fetch = require("node-fetch"); // Required if using Node version below 18
+
 
 
 dotenv.config();
@@ -254,8 +254,38 @@ app.post("/interview-questions", async (req, res) => {
     const prompt = `Analyze: [${resumeText}]. Generate 3 deeply technical interview vetting questions tracking their engineering focus vector space profile. Return ONLY a raw JSON schema structure: {"questions": ["Q1", "Q2", "Q3"]}`;
     
     const aiRawText = await callExternalAI(prompt, "Return clean raw JSON strings only.");
-    const cleanedJson = aiRawText.replace(/```json|```/g, "").trim();
-    res.json({ success: true, result: JSON.parse(cleanedJson) });
+    console.log("========== RAW AI RESPONSE ==========");
+console.log(aiRawText);
+console.log("=====================================");
+    const cleanedJson = aiRawText
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+console.log("RAW AI RESPONSE:");
+console.log(cleanedJson);
+
+try {
+  const firstBrace = cleanedJson.indexOf("{");
+  const lastBrace = cleanedJson.lastIndexOf("}");
+
+  const jsonOnly = cleanedJson.substring(firstBrace, lastBrace + 1);
+
+  const parsed = JSON.parse(jsonOnly);
+
+  res.json({
+    success: true,
+    result: parsed
+  });
+
+} catch (err) {
+
+  console.error("JSON Parse Failed");
+  console.error(cleanedJson);
+
+  throw err;
+
+}
   } catch (error) {
     res.json({ 
       success: true, 
@@ -300,22 +330,51 @@ app.post("/project-generator", async (req, res) => {
 // 8. VENDOR TARGETING / COMPANY PREP
 // ==========================================
 app.post("/company-prep", async (req, res) => {
+
+  console.log("🔥 Company Prep API HIT");
+  console.log(req.body);
+
   try {
     const { company, role } = req.body;
+
     const prompt = `Synthesize target interview testing blueprints for evaluating a candidate tracking into a ${role} position within ${company}. Return ONLY a valid JSON string layout formatting matching: {"coreFocus": "Description"}`;
-    
-    const aiRawText = await callExternalAI(prompt, "Return clean raw JSON structures only.");
-    const cleanedJson = aiRawText.replace(/```json|```/g, "").trim();
-    res.json({ success: true, result: JSON.parse(cleanedJson) });
-  } catch (error) {
-    res.json({ 
-      success: true, 
-      result: { 
-        coreFocus: "Deep evaluation criteria emphasizes complex system schema design paradigms, data structuring query pipelines, and memory optimization layouts specific to high-concurrency enterprise data systems." 
-      } 
+
+    const aiRawText = await callExternalAI(
+  prompt,
+  "Return clean raw JSON structures only."
+);
+
+console.log("========== RAW AI RESPONSE ==========");
+console.log(aiRawText);
+console.log("=====================================");
+
+const cleanedJson = aiRawText
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+console.log("========== CLEANED JSON ==========");
+console.log(cleanedJson);
+console.log("=================================");
+
+    res.json({
+      success: true,
+      result: JSON.parse(cleanedJson)
     });
-  }
-});
+
+  } catch (error) {
+
+  console.log("===== COMPANY PREP ERROR =====");
+  console.error(error);
+
+  res.json({
+    success: true,
+    result: {
+      coreFocus: "Fallback"
+    }
+  });
+
+  }});
 
 
   app.post("/career-gap", async (req, res) => {
@@ -385,7 +444,31 @@ app.post("/portfolio", async (req, res) => {
 
   }
 });
+app.post("/company-prep", async (req, res) => {
 
+  try {
+
+    const { company, role } = req.body;
+
+    const result = await generateCompanyPrep(company, role);
+
+    res.json({
+      success: true,
+      result
+    });
+
+  } catch (err) {
+
+    console.error("Company Prep Error:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+
+  }
+
+});
 // ==========================================
 // BOOTSTRAP INITIALIZATION ENGINE LISTENERS
 // ==========================================
