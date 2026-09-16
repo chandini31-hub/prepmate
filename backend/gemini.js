@@ -232,7 +232,7 @@ ${targetRole}
 `;
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+    model: "openai/gpt-oss-20b",
 
     messages: [
       {
@@ -290,7 +290,7 @@ Return only the rewritten resume.
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -338,7 +338,7 @@ ${jobDescription}
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -365,16 +365,11 @@ async function generateRoadmap(
   resumeText,
   jobDescription = "",
   duration = "90 Days",
-  targetRole = "Software Engineer"
+  targetRole =""
 ) {
   const days = parseInt(duration) || 90;
 
-  const weeks = Math.ceil(days / 7);
-
-  const roleCategory =
-    getRoleCategory(targetRole);
-
-  let actualWeeks = weeks;
+  let actualWeeks;
 
   // Exact roadmap lengths
   if (days <= 30) {
@@ -389,17 +384,23 @@ async function generateRoadmap(
     actualWeeks = Math.ceil(days / 7);
   }
 
+  const roleCategory =
+    getRoleCategory(targetRole);
+
   let roleInstructions = "";
 
   if (roleCategory === "software") {
     roleInstructions = `
-Focus on:
+Focus on the skills genuinely required for the target role.
+
+Possible areas include:
 
 Programming Fundamentals
 DSA
 OOP
 C++
-Python/Java where appropriate
+Python
+Java
 Git/GitHub
 SQL
 Databases
@@ -411,8 +412,11 @@ Deployment
 System Design
 Real-world Projects
 
-Do NOT make every week about System Design.
-System Design should appear mainly in later stages.
+Do not include every technology.
+Only include technologies relevant to the candidate's target role,
+resume and job description.
+
+Introduce advanced topics later in the roadmap.
 `;
   }
 
@@ -437,7 +441,8 @@ Data Storytelling
 Business Problem Solving
 Portfolio Projects
 
-Do NOT generate backend, frontend, system design or DSA-heavy content unless the job description specifically requires it.
+Do NOT generate backend, frontend or system design content
+unless the job description specifically requires it.
 `;
   }
 
@@ -463,8 +468,8 @@ Market Research
 Case Studies
 Product Portfolio Projects
 
-Do NOT generate a software-engineering-heavy roadmap.
-Do NOT fill the roadmap with DSA, backend, frontend or system design unless explicitly required by the job description.
+Do NOT generate DSA, backend, frontend or system design
+unless explicitly required by the job description.
 `;
   }
 
@@ -486,19 +491,29 @@ Feature Engineering
 Model Evaluation
 Scikit-learn
 ML Projects
+Model Deployment
 `;
   }
 
   else {
     roleInstructions = `
-Use the target role and job description to determine the most relevant skills.
+Use the target role, resume and job description to determine
+the most relevant skills and learning sequence.
 `;
   }
+    const candidateProfile = `
+Target Role: ${targetRole}
 
+Candidate Skills:
+${resumeText.slice(0, 2500)}
+
+Job Requirements:
+${jobDescription.slice(0, 1500)}
+`;
   const prompt = `
 Return ONLY valid JSON.
 
-You are an expert career mentor.
+You are an expert career mentor creating a personalized learning roadmap.
 
 TARGET ROLE:
 ${targetRole}
@@ -509,40 +524,37 @@ ${roleCategory}
 DURATION:
 ${duration}
 
-You MUST generate EXACTLY ${actualWeeks} roadmap objects.
+NUMBER OF WEEKS:
+${actualWeeks}
 
-If duration is 30 Days:
-Return exactly Week 1, Week 2, Week 3, Week 4.
+ROADMAP REQUIREMENTS:
 
-If duration is 60 Days:
-Return exactly Week 1 through Week 8.
-
-If duration is 90 Days:
-Return exactly Week 1 through Week 12.
-
-If duration is 120 Days:
-Return exactly Week 1 through Week 16.
-
-NEVER return more weeks than requested.
-
-NEVER return fewer weeks than requested.
+- Return exactly ${actualWeeks} week objects.
+- Each week MUST contain exactly 7 topics.
+- Each topic represents one learning day.
+- Topics must be unique across the entire roadmap.
+- Each topic must be 8 words or fewer.
+- Do not repeat topics.
+- Topics must progress from beginner to advanced.
+- Start with prerequisites and fundamentals.
+- Gradually introduce intermediate and advanced concepts.
+- Use the candidate's actual missing skills.
+- Prioritize the target role and job requirements.
+- Include practical exercises.
+- Include coding practice where relevant.
+- Include project-building at appropriate stages.
+- Include specific review days where useful.
+- Avoid making every day theoretical.
+- Avoid making every day a project.
+- Put interview preparation near the final stage.
+- Put resume and portfolio preparation near the final stage.
+- Put job application preparation near the final stage.
+- Do not add unrelated technologies.
+- The roadmap should feel realistic and human-designed.
 
 ${roleInstructions}
 
-General rules:
-
-- Every week must contain 4-6 topics.
-- Topics must progress from beginner to advanced.
-- Topics must be relevant to the target role.
-- Use the candidate's actual missing skills.
-- Do not randomly add unrelated technologies.
-- Include practical learning.
-- Include projects at appropriate stages.
-- Include interview preparation near the end.
-- Include resume/portfolio preparation near the end.
-- Include job application preparation in the final stage.
-
-Return exactly:
+OUTPUT FORMAT:
 
 {
   "missingSkills": [],
@@ -550,40 +562,43 @@ Return exactly:
     {
       "week": "Week 1",
       "topics": [
-        "Topic 1",
-        "Topic 2",
-        "Topic 3",
-        "Topic 4"
+        "Day 1 topic",
+        "Day 2 topic",
+        "Day 3 topic",
+        "Day 4 topic",
+        "Day 5 topic",
+        "Day 6 topic",
+        "Day 7 topic"
       ]
     }
   ]
 }
 
-The roadmap array MUST contain exactly ${actualWeeks} objects.
+IMPORTANT:
+The roadmap array MUST contain exactly ${actualWeeks} weeks.
+Every week MUST contain exactly 7 unique topics.
 
-Candidate Resume:
-${resumeText}
-
-Job Description:
-${jobDescription}
+CANDIDATE PROFILE:
+${candidateProfile}
 `;
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
           role: "user",
-          content: prompt,
-        },
+          content: prompt
+        }
       ],
 
       temperature: 0.2,
+      max_completion_tokens:3000,
 
       response_format: {
-        type: "json_object",
-      },
+        type: "json_object"
+      }
     });
 
   const cleaned = cleanJSON(
@@ -591,17 +606,103 @@ ${jobDescription}
   );
 
   const parsed = JSON.parse(cleaned);
+    for (let i = 0; i < parsed.roadmap.length; i++) {
+    const week = parsed.roadmap[i];
 
-  // Safety: force the frontend to receive the requested
-  // number of weeks only.
-  if (Array.isArray(parsed.roadmap)) {
-    parsed.roadmap =
-      parsed.roadmap.slice(0, actualWeeks);
+    if (!Array.isArray(week.topics)) {
+      throw new Error(
+        `Week ${i + 1} does not contain a topics array.`
+      );
+    }
+
+    if (week.topics.length !== 7) {
+      throw new Error(
+        `Week ${i + 1} must contain exactly 7 topics but received ${week.topics.length}.`
+      );
+    }
   }
 
-  return parsed;
-}
+  // ==============================================
+  // VALIDATE ROADMAP
+  // ==============================================
 
+  if (!Array.isArray(parsed.roadmap)) {
+    throw new Error(
+      "AI did not return a valid roadmap."
+    );
+  }
+
+  if (parsed.roadmap.length !== actualWeeks) {
+    throw new Error(
+      `Invalid roadmap length. Expected ${actualWeeks} weeks but received ${parsed.roadmap.length}.`
+    );
+  }
+
+  // ==============================================
+  // VALIDATE 7 TOPICS PER WEEK
+  // ==============================================
+
+  for (
+    let i = 0;
+    i < parsed.roadmap.length;
+    i++
+  ) {
+    const week = parsed.roadmap[i];
+
+    if (!Array.isArray(week.topics)) {
+      throw new Error(
+        `Week ${i + 1} does not contain a topics array.`
+      );
+    }
+
+    if (week.topics.length !== 7) {
+      throw new Error(
+        `Week ${i + 1} must contain exactly 7 topics. Received ${week.topics.length}.`
+      );
+    }
+  }
+
+  // ==============================================
+  // VALIDATE UNIQUE TOPICS
+  // ==============================================
+
+  const allTopics =
+    parsed.roadmap.flatMap(
+      (week) => week.topics
+    );
+
+  const normalizedTopics =
+    allTopics.map((topic) =>
+      String(topic)
+        .trim()
+        .toLowerCase()
+    );
+
+  const uniqueTopics =
+    new Set(normalizedTopics);
+
+  if (
+    uniqueTopics.size !==
+    normalizedTopics.length
+  ) {
+    throw new Error(
+      "Roadmap contains duplicate topics. Please generate again."
+    );
+  }
+
+  // ==============================================
+  // RETURN VALID ROADMAP
+  // ==============================================
+
+  return {
+    missingSkills:
+      Array.isArray(parsed.missingSkills)
+        ? parsed.missingSkills
+        : [],
+
+    roadmap: parsed.roadmap
+  };
+}
 // ======================================================
 // INTERVIEW QUESTIONS
 // ======================================================
@@ -644,7 +745,7 @@ ${jobDescription}
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -698,7 +799,7 @@ Score must be between 0 and 10.
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -748,7 +849,7 @@ Rules:
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -821,7 +922,7 @@ ${jobDescription}
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -887,7 +988,7 @@ Rules:
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -918,18 +1019,18 @@ async function skillGapAnalyzer(
   resumeText,
   targetRole
 ) {
-  const category =
-    getRoleCategory(targetRole);
+  const category = getRoleCategory(targetRole);
 
-  const roleSkills =
-    getRoleSkills(targetRole);
+  const roleSkills = getRoleSkills(targetRole);
 
   const prompt = `
-Return ONLY valid JSON.
+Return the skill gap analysis according to the required JSON schema.
+Do not include markdown.
+Do not include explanations outside the JSON structure.
 
-You are a Senior Technical Hiring Manager.
+You are a Senior Technical Hiring Manager and Career Assessment Specialist.
 
-Analyze this candidate ONLY for:
+Analyze this candidate specifically for:
 
 TARGET ROLE:
 ${targetRole}
@@ -942,12 +1043,16 @@ ${roleSkills.join(", ")}
 
 Do NOT analyze the candidate as a generic software engineer.
 
-The missing skills MUST change depending on the target role.
+Your goal is to determine:
+1. What the candidate already knows.
+2. What skills are missing for the target role.
+3. How job-ready the candidate currently is.
+4. Which skill categories are strong or weak.
 
-For example:
+ROLE-SPECIFIC ANALYSIS:
 
 For Software Engineer:
-Consider DSA, programming, OOP, Git, SQL, APIs, backend, frontend, testing, deployment, system design and projects.
+Consider programming, DSA, OOP, Git, SQL, APIs, backend, frontend, testing, deployment, system design and projects.
 
 For Data Analyst:
 Consider Excel, SQL, Python, Pandas, NumPy, statistics, data cleaning, EDA, visualization, Power BI, Tableau, dashboards and data storytelling.
@@ -960,61 +1065,126 @@ Consider Python, statistics, probability, Pandas, NumPy, SQL, visualization, mac
 
 Do NOT automatically return System Design.
 
-Only return System Design if it is genuinely missing AND relevant to the target role.
+Only include System Design if it is genuinely relevant to the target role and missing from the resume.
 
 Do NOT return a skill merely because it is common in technology.
 
-Check whether the skill is actually present in the resume.
+Check whether each skill is actually present in the resume.
 
-Return EXACTLY:
+==================================================
+READINESS SCORE
+==================================================
 
-{
-  "currentLevel": "",
-  "strongSkills": [],
-  "missingSkills": [
-    {
-      "skill": "",
-      "priority": "",
-      "gap": 0,
-      "hours": 0
-    }
-  ],
-  "estimatedTime": ""
-}
+Return an overall readiness score from 0-100.
 
-Current Level must be:
+This represents how prepared the candidate currently is for the TARGET ROLE.
 
-Beginner
-Intermediate
-Advanced
+Consider:
 
-Strong Skills:
+- Relevant technical skills
+- Practical projects
+- Role-specific knowledge
+- Tools and technologies
+- Experience
+- Evidence of applying skills
 
-- Maximum 5
-- Only skills actually present in resume.
+Do NOT give a high score merely because the resume contains many technologies.
 
-Missing Skills:
+==================================================
+SKILL BREAKDOWN
+==================================================
 
-- Only role-relevant skills.
-- Do not include skills already clearly demonstrated.
-- Return 5-10 important missing skills when applicable.
-- Prioritize the most important gaps first.
+Return 5-7 role-relevant skill categories.
 
-Priority:
+Each category must contain:
+
+- name
+- score
+
+Score must be between 0 and 100.
+
+Only use categories relevant to the TARGET ROLE.
+
+Examples:
+
+Software Engineer:
+Programming
+DSA
+Development
+Databases
+APIs
+Testing
+Cloud & DevOps
+
+Data Analyst:
+Excel
+SQL
+Python
+Statistics
+Data Analysis
+Visualization
+BI Tools
+
+Data Scientist:
+Python
+Statistics
+Data Analysis
+Machine Learning
+Deep Learning
+SQL
+Model Evaluation
+
+Product Manager:
+Product Strategy
+User Research
+Analytics
+Product Metrics
+Roadmapping
+Agile
+Communication
+
+The categories must change depending on the target role.
+
+==================================================
+STRONG SKILLS
+==================================================
+
+Maximum 5.
+
+Only include skills clearly demonstrated in the resume.
+
+==================================================
+MISSING SKILLS
+==================================================
+
+Return 5-10 important role-relevant missing skills when applicable.
+
+Do NOT include skills already clearly demonstrated.
+
+Prioritize the most important gaps first.
+
+Each missing skill must contain:
+
+- skill
+- priority
+- gap
+- hours
+
+Priority must be:
 
 High
 Medium
 Low
 
-Gap:
+Gap must be a number from 50-100.
 
-50-100
+Hours must represent realistic learning hours needed to become reasonably comfortable with that skill.
 
-Hours:
+==================================================
+ESTIMATED TIME
+==================================================
 
-Realistic learning hours.
-
-EstimatedTime must be exactly one of:
+Choose exactly one:
 
 30 Days
 45 Days
@@ -1022,6 +1192,18 @@ EstimatedTime must be exactly one of:
 90 Days
 120 Days
 180 Days
+
+Base this on the number and severity of skill gaps.
+
+Current Level must be:
+
+Beginner
+Intermediate
+Advanced
+
+Read the resume carefully before assigning scores.
+
+Do not invent experience or skills.
 
 Resume:
 ${resumeText}
@@ -1032,7 +1214,7 @@ ${targetRole}
 
   const completion =
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
 
       messages: [
         {
@@ -1044,8 +1226,93 @@ ${targetRole}
       temperature: 0.1,
 
       response_format: {
-        type: "json_object",
+  type: "json_schema",
+  json_schema: {
+    name: "skill_gap_analysis",
+    strict: true,
+    schema: {
+      type: "object",
+
+      properties: {
+        currentLevel: {
+          type: "string",
+          enum: [
+            "Beginner",
+            "Intermediate",
+            "Advanced"
+          ]
+        },
+
+        strongSkills: {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        },
+
+        missingSkills: {
+          type: "array",
+          items: {
+            type: "object",
+
+            properties: {
+              skill: {
+                type: "string"
+              },
+
+              priority: {
+                type: "string",
+                enum: [
+                  "High",
+                  "Medium",
+                  "Low"
+                ]
+              },
+
+              gap: {
+                type: "number"
+              },
+
+              hours: {
+                type: "number"
+              }
+            },
+
+            required: [
+              "skill",
+              "priority",
+              "gap",
+              "hours"
+            ],
+
+            additionalProperties: false
+          }
+        },
+
+        estimatedTime: {
+          type: "string",
+          enum: [
+            "30 Days",
+            "45 Days",
+            "60 Days",
+            "90 Days",
+            "120 Days",
+            "180 Days"
+          ]
+        }
       },
+
+      required: [
+        "currentLevel",
+        "strongSkills",
+        "missingSkills",
+        "estimatedTime"
+      ],
+
+      additionalProperties: false
+    }
+  }
+},
     });
 
   const raw =
@@ -1060,7 +1327,7 @@ ${targetRole}
     recommendProjects(targetRole);
 
   console.log("PROJECTS SENT TO FRONTEND:");
-console.log(parsed.recommendedProjects);
+  console.log(parsed.recommendedProjects);
 
   return parsed;
 }
@@ -1466,7 +1733,7 @@ Before returning JSON:
     const completion =
       await groq.chat.completions.create({
 
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
 
         messages: [
           {
@@ -1483,8 +1750,8 @@ Before returning JSON:
         temperature: 0,
 
         response_format: {
-          type: "json_object"
-        }
+  type: "json_object",
+},
 
       });
 

@@ -15,18 +15,15 @@ export default function UploadCard({
   handleUpload,
   loading,
 }: UploadCardProps) {
-
   function handleFileChange(
     event: ChangeEvent<HTMLInputElement>
   ) {
-    const selectedFile =
-      event.target.files?.[0];
+    const selectedFile = event.target.files?.[0];
 
     if (!selectedFile) {
       return;
     }
 
-    // Only PDF
     if (selectedFile.type !== "application/pdf") {
       alert("Please select a PDF file only.");
       event.target.value = "";
@@ -35,128 +32,152 @@ export default function UploadCard({
 
     setFile(selectedFile);
 
-    console.log(
-      "SELECTED FILE:",
-      selectedFile.name
-    );
+    console.log("SELECTED FILE:", selectedFile.name);
   }
 
   return (
-    <section className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8">
+    <section className="bg-white border border-[#d7e2ef] rounded-[28px] p-6 md:p-8 shadow-sm">
 
       {/* HEADER */}
 
-      <div className="text-center">
+      <div className="flex items-start gap-4 mb-7">
 
-        <div className="mx-auto w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-6">
+        <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#e5edf8] flex items-center justify-center text-2xl">
+          📄
+        </div>
 
-          <svg
-            className="w-10 h-10 text-yellow-400"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 16V4m0 0-4 4m4-4 4 4"
-            />
+        <div>
+          <p className="uppercase tracking-[0.2em] text-xs font-bold text-[#6482a3]">
+            Step 02
+          </p>
 
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"
-            />
-          </svg>
+          <h2 className="text-2xl md:text-3xl font-bold text-[#35495c] mt-1">
+            Upload your resume
+          </h2>
+
+          <p className="text-[#7b8794] mt-1">
+            Upload your latest resume and let PrepMate review it.
+          </p>
+        </div>
+
+      </div>
+
+
+      {/* UPLOAD AREA */}
+
+      <label
+        htmlFor="resume-upload"
+        className="block cursor-pointer"
+      >
+
+        <div
+          className={`
+            rounded-3xl
+            border-2
+            border-dashed
+            transition-all
+            duration-200
+            p-8 md:p-10
+            text-center
+            ${
+              file
+                ? "border-[#91bd9a] bg-[#f0f8f1]"
+                : "border-[#cbd8e6] bg-[#f7faff] hover:border-[#91aeca] hover:bg-[#f2f7fc]"
+            }
+          `}
+        >
+
+          {file ? (
+            <>
+              {/* SELECTED FILE */}
+
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-[#dcefe0] flex items-center justify-center text-3xl mb-4">
+                📄
+              </div>
+
+              <p className="text-[#47734e] font-bold text-lg break-all">
+                {file.name}
+              </p>
+
+              <p className="text-[#6d8671] text-sm mt-2">
+                ✓ PDF selected successfully
+              </p>
+
+              <p className="text-[#91a092] text-xs mt-3">
+                Click here to choose a different file
+              </p>
+            </>
+          ) : (
+            <>
+              {/* EMPTY STATE */}
+
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-[#e7eef8] flex items-center justify-center text-3xl mb-4">
+                📁
+              </div>
+
+              <p className="text-[#435568] font-bold text-lg">
+                Choose your resume
+              </p>
+
+              <p className="text-[#7d8997] mt-2">
+                Click anywhere here to select your PDF
+              </p>
+
+              <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full bg-white border border-[#d8e1eb] text-sm text-[#718092]">
+                📎 PDF files only
+              </div>
+            </>
+          )}
 
         </div>
 
-        <h2 className="text-3xl font-bold text-yellow-400">
-          Upload Resume
-        </h2>
+      </label>
 
-        <p className="text-gray-400 mt-2">
-          Upload your resume in PDF format
-        </p>
-
-      </div>
-
-
-      {/* FILE SELECTOR */}
-
-      <div className="mt-8">
-
-        <label
-          htmlFor="resume-upload"
-          className="block cursor-pointer"
-        >
-
-          <div className="border-2 border-dashed border-gray-700 hover:border-yellow-500 rounded-2xl p-8 text-center transition">
-
-            {file ? (
-              <div>
-
-                <div className="text-4xl mb-3">
-                  📄
-                </div>
-
-                <p className="text-yellow-400 font-semibold text-lg">
-                  {file.name}
-                </p>
-
-                <p className="text-gray-500 text-sm mt-2">
-                  PDF selected successfully
-                </p>
-
-              </div>
-            ) : (
-              <div>
-
-                <div className="text-4xl mb-3">
-                  📁
-                </div>
-
-                <p className="text-white font-semibold">
-                  Click to choose your resume
-                </p>
-
-                <p className="text-gray-500 text-sm mt-2">
-                  PDF files only
-                </p>
-
-              </div>
-            )}
-
-          </div>
-
-        </label>
-
-        <input
-          id="resume-upload"
-          type="file"
-          accept=".pdf,application/pdf"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-      </div>
+      <input
+        id="resume-upload"
+        type="file"
+        accept=".pdf,application/pdf"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
 
       {/* ANALYZE BUTTON */}
 
-      <div className="flex justify-center mt-8">
+      <div className="mt-7 flex flex-col sm:flex-row items-center justify-between gap-4">
+
+        <div className="text-sm text-[#8b929a]">
+          {file ? (
+            <span className="text-[#66816c]">
+              ✓ Ready to analyze
+            </span>
+          ) : (
+            "Your resume stays connected to your PrepMate profile."
+          )}
+        </div>
+
 
         <button
           type="button"
           onClick={handleUpload}
           disabled={!file || loading}
-          className="bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-black px-8 py-4 rounded-xl font-bold transition"
+          className={`
+            w-full sm:w-auto
+            px-7 py-3.5
+            rounded-2xl
+            font-bold
+            transition-all
+            ${
+              !file || loading
+                ? "bg-[#e5e1dc] text-[#aaa4a0] cursor-not-allowed"
+                : "bg-[#7c63b8] hover:bg-[#7056aa] text-white shadow-sm hover:shadow-md"
+            }
+          `}
         >
 
           {loading
-            ? "⏳ Analyzing Resume..."
-            : "🚀 Analyze Resume"}
+            ? "⏳ Analyzing resume..."
+            : "✨ Analyze Resume"}
 
         </button>
 

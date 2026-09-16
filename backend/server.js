@@ -47,7 +47,7 @@ const AI_API_KEY = process.env.GROQ_API_KEY || process.env.XAI_API_KEY;
 const AI_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 // Update this to a live, active Groq production model ID!
-const MODEL_NAME = "llama-3.1-8b-instant";
+const MODEL_NAME = "openai/gpt-oss-20b";
 
 // Global unified dynamic prompt processor
 async function callExternalAI(prompt, systemInstruction = "You are an elite career platform intelligence engine.") {
@@ -205,22 +205,28 @@ app.post("/roadmap", async (req, res) => {
     const {
       resumeText,
       jobDescription,
-      duration
+      duration,
+      targetRole
     } = req.body;
 
-    const result = await generateRoadmap(
-  resumeText,
-  jobDescription,
-  duration
-);
+    console.log("ROADMAP REQUEST:");
+    console.log("Target Role:", targetRole);
+    console.log("Duration:", duration);
 
-res.json({
-  success: true,
-  result
-});
+    const result = await generateRoadmap(
+      resumeText,
+      jobDescription,
+      duration,
+      targetRole
+    );
+
+    res.json({
+      success: true,
+      result
+    });
 
   } catch (err) {
-    console.error(err);
+    console.error("ROADMAP ERROR:", err);
 
     res.status(500).json({
       success: false,
@@ -412,6 +418,55 @@ app.post("/portfolio", async (req, res) => {
     res.status(500).json({
       success: false,
       error: err.message,
+    });
+  }
+});
+// ======================================================
+// SKILL GAP ANALYZER
+// ======================================================
+
+app.post("/skill-gap", async (req, res) => {
+  try {
+    const { resumeText, targetRole } = req.body;
+
+    console.log("=================================");
+    console.log("SKILL GAP ANALYZER");
+    console.log("TARGET ROLE:", targetRole);
+    console.log("RESUME TEXT LENGTH:", resumeText?.length);
+    console.log("=================================");
+
+    if (!resumeText || !resumeText.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Resume text is missing.",
+      });
+    }
+
+    if (!targetRole || !targetRole.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Target role is missing.",
+      });
+    }
+
+    const result = await skillGapAnalyzer(
+      resumeText,
+      targetRole
+    );
+
+    res.json({
+      success: true,
+      result,
+    });
+
+  } catch (err) {
+    console.error("SKILL GAP ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error:
+        err.message ||
+        "Skill gap analysis failed.",
     });
   }
 });
