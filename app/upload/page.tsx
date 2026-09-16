@@ -2,6 +2,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import UploadCard from "../../components/resume/UploadCard";
+import ATSCard from "../../components/resume/ATSCard";
+import StrengthCard from "../../components/resume/StrengthCard";
+import WeaknessCard from "../../components/resume/WeaknessCard";
+import KeywordCard from "../../components/resume/KeywordCard";
+import SuggestionCard from "../../components/resume/SuggestionCard";
 import {
   Upload,
   Sparkles,
@@ -416,170 +422,52 @@ duration-300 backdrop-blur-xl rounded-3xl p-6 sticky top-6 self-start">
 )}
 
           {activeTab === "resume" && (
-            <div className="space-y-6">
-              {/* Core Resume Upload card logic */}
-              <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-8">
-                <div className="flex flex-col items-center">
-                  <Upload size={50} className="text-yellow-400 mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">Upload Resume</h3>
-                  <textarea
-  value={jobDescription}
-  onChange={(e) => setJobDescription(e.target.value)}
-  placeholder="Paste Target Job Description Here"
-  className="w-full h-40 bg-black/40 border border-yellow-500/20 rounded-xl p-4 text-white mt-4"
-/>
 
-                  <input type="file" accept=".pdf" className="mt-4 text-sm" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                  <div className="flex gap-4 mt-6">
-  <button
-    onClick={handleUpload}
-    className="px-6 py-2 rounded-xl bg-yellow-500 text-black font-semibold"
-  >
-    {loading ? "Analyzing..." : "Analyze Resume"}
-  </button>
+<div className="space-y-10">
 
-  <button
-    onClick={handleRewrite}
-    className="px-6 py-2 rounded-xl border border-yellow-500/40 text-yellow-400"
-  >
-    Rewrite with AI
-  </button>
-</div>
-                    {result && (
-                   <>
-    <div className="
-bg-linear-to-br
-from-yellow-500/20
-via-yellow-500/5
-to-transparent
-border border-yellow-500/20
-rounded-3xl
-p-8
-mb-8
-shadow-[0_0_40px_rgba(212,175,55,0.15)]
-">
+    <UploadCard
+        file={file}
+        setFile={setFile}
+        handleUpload={handleUpload}
+        loading={loading}
+    />
 
-  <div className="text-center">
+    {result && (
 
-    <h2 className="text-yellow-400 text-2xl font-bold">
-      ATS SCORE
-    </h2>
+    <>
 
-    <div className="mt-4 text-8xl font-black text-yellow-300">
-      {result.atsScore}
-    </div>
+        <ATSCard
+            score={result.atsScore}
+            roleReadiness={result.roleReadiness}
+        />
 
-    <div className="text-gray-500 text-xl">
-      /100
-    </div>
+        <div className="grid lg:grid-cols-2 gap-8">
 
-    <p className="text-blue-300 mt-4 text-lg">
-      {result.roleReadiness}
-    </p>
+            <StrengthCard
+                strengths={result.strengths || []}
+            />
 
-    <div className="mt-5">
-      <span className="
-      px-4
-      py-2
-      rounded-full
-      bg-red-500/20
-      text-red-400
-      font-semibold
-      ">
-        {result.atsScore >= 80
-          ? "Excellent Match"
-          : result.atsScore >= 65
-          ? "Good Match"
-          : "Needs Improvement"}
-      </span>
-    </div>
+            <WeaknessCard
+                weaknesses={result.weaknesses || []}
+            />
 
-  </div>
+        </div>
 
-</div>  
-<div className="grid grid-cols-3 gap-4 mb-8">
+        <KeywordCard
+            keywords={result.missingSkills || []}
+        />
 
-  <div className="bg-green-500/10 rounded-2xl p-5 text-center">
-    <div className="text-3xl font-bold text-green-400">
-      {result.strengths?.length || 0}
-    </div>
-    <div className="text-gray-400">
-      Strengths
-    </div>
-  </div>
+        <SuggestionCard
+            suggestions={result.suggestions || []}
+        />
 
-  <div className="bg-red-500/10 rounded-2xl p-5 text-center">
-    <div className="text-3xl font-bold text-red-400">
-      {result.missingSkills?.length || 0}
-    </div>
-    <div className="text-gray-400">
-      Skill Gaps
-    </div>
-  </div>
+    </>
 
-  <div className="bg-blue-500/10 rounded-2xl p-5 text-center">
-    <div className="text-3xl font-bold text-blue-400">
-      {result.atsScore}%
-    </div>
-    <div className="text-gray-400">
-      Readiness
-    </div>
-  </div>
+    )}
 
 </div>
-  <div className="grid md:grid-cols-2 gap-6 mt-6">
 
-  <div className="bg-green-500/10 p-5 rounded-xl">
-    <h3 className="text-green-400 font-bold mb-3">
-      Strengths
-    </h3>
-
-    {result.strengths?.map((s:any,i:number)=>(
-      <p key={i}>✅ {s}</p>
-    ))}
-  </div>
-
-  <div className="bg-red-500/10 p-5 rounded-xl">
-    <h3 className="text-red-400 font-bold mb-3">
-      Weaknesses
-    </h3>
-
-    {result.weaknesses?.map((s:any,i:number)=>(
-      <p key={i}>❌ {s}</p>
-    ))}
-  </div>
-
-  <div className="bg-yellow-500/10 p-5 rounded-xl">
-    <h3 className="text-yellow-400 font-bold mb-3">
-      Missing Skills
-    </h3>
-
-    {result.missingSkills?.map((s:any,i:number)=>(
-      <p key={i}>⚠️ {s}</p>
-    ))}
-  </div>
-
-  <div className="bg-blue-500/10 p-5 rounded-xl">
-    <h3 className="text-blue-400 font-bold mb-3">
-      Suggestions
-    </h3>
-
-    {result.suggestions?.map((s:any,i:number)=>(
-      <p key={i}>💡 {s}</p>
-    ))}
-  </div>
-
-</div>
-  </>
 )}
-              {rewrittenResume && (
-                <div className="bg-white/5 border border-yellow-500/20 rounded-3xl p-6">
-                  <h3 className="text-yellow-400 font-bold mb-4">Improved Draft</h3>
-                  <pre className="whitespace-pre-wrap text-gray-300 text-sm max-h-96 overflow-y-auto bg-black/40 p-4 rounded-xl">{rewrittenResume}</pre>
-                </div>
-              )}
-            </div>
-            </div></div>)}
           
 
           {activeTab === "gapanalyzer" && (

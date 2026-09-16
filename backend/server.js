@@ -47,7 +47,7 @@ const AI_API_KEY = process.env.GROQ_API_KEY || process.env.XAI_API_KEY;
 const AI_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 // Update this to a live, active Groq production model ID!
-const MODEL_NAME = "llama-3.1-8b-instant";
+const MODEL_NAME = "openai/gpt-oss-20b";
 
 // Global unified dynamic prompt processor
 async function callExternalAI(prompt, systemInstruction = "You are an elite career platform intelligence engine.") {
@@ -92,26 +92,37 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
     const resumeText = pdfData.text;
 
 const targetRole =
-  req.body.targetRole ||
-  req.body.jobDescription ||
-  "Software Engineer";
-  console.log("==========");
-console.log("RESUME LENGTH:", resumeText.length);
-console.log("TARGET ROLE:", targetRole);
-console.log("==========");
+  req.body.targetRole || "Software Engineer";
+
+console.log(
+  "TARGET ROLE RECEIVED:",
+  targetRole
+);
 
 console.log("TARGET ROLE:");
 console.log(targetRole);
+if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No resume uploaded.",
+        });
+      }
 
-const analysis = await analyzeResume(
+      console.log(
+        "FILE:",
+        req.file.originalname
+      );
+
+
+const result = await analyzeResume(
   resumeText,
   targetRole
 );
 console.log("========== BACKEND ==========");
-console.log(typeof analysis);
-console.log(analysis);
+console.log(typeof result);
+console.log(result);
 
-const parsed = JSON.parse(analysis);
+const parsed = JSON.parse(result);
 
 console.log("PARSED:");
 console.dir(parsed, { depth: null });
@@ -122,11 +133,6 @@ res.json({
   resumeText
 });
 
-res.json({
-  success: true,
-  result: analysis,
-  resumeText
-});
 
   } catch (err) {
   console.error("UPLOAD ERROR:");
@@ -134,7 +140,7 @@ res.json({
 
   res.status(500).json({
     success: false,
-    error: err.message
+    error: err.message || "Resume analysis failed.",
   });
 }
 });
@@ -199,22 +205,28 @@ app.post("/roadmap", async (req, res) => {
     const {
       resumeText,
       jobDescription,
-      duration
+      duration,
+      targetRole
     } = req.body;
 
-    const result = await generateRoadmap(
-  resumeText,
-  jobDescription,
-  duration
-);
+    console.log("ROADMAP REQUEST:");
+    console.log("Target Role:", targetRole);
+    console.log("Duration:", duration);
 
-res.json({
-  success: true,
-  result
-});
+    const result = await generateRoadmap(
+      resumeText,
+      jobDescription,
+      duration,
+      targetRole
+    );
+
+    res.json({
+      success: true,
+      result
+    });
 
   } catch (err) {
-    console.error(err);
+    console.error("ROADMAP ERROR:", err);
 
     res.status(500).json({
       success: false,
@@ -326,105 +338,72 @@ app.post("/project-generator", async (req, res) => {
   }
 });
 
-// ==========================================
-// 8. VENDOR TARGETING / COMPANY PREP
-// ==========================================
-app.post("/company-prep", async (req, res) => {
 
-  console.log("🔥 Company Prep API HIT");
-  console.log(req.body);
 
+  // ==========================================
+// CAREER GAP / SKILL GAP ANALYZER
+// ==========================================
+
+app.post("/career-gap", async (req, res) => {
   try {
-    const { company, role } = req.body;
+    const { resumeText, targetRole } = req.body;
 
-    const prompt = `Synthesize target interview testing blueprints for evaluating a candidate tracking into a ${role} position within ${company}. Return ONLY a valid JSON string layout formatting matching: {"coreFocus": "Description"}`;
+    if (!resumeText || !resumeText.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Resume text is required."
+      });
+    }
 
-    const aiRawText = await callExternalAI(
-  prompt,
-  "Return clean raw JSON structures only."
-);
+    if (!targetRole || !targetRole.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Target job role is required."
+      });
+    }
 
-console.log("========== RAW AI RESPONSE ==========");
-console.log(aiRawText);
-console.log("=====================================");
+    console.log("====================================");
+    console.log("CAREER GAP ANALYSIS");
+    console.log("Target Role:", targetRole);
+    console.log("Resume Length:", resumeText.length);
+    console.log("====================================");
 
-const cleanedJson = aiRawText
-  .replace(/```json/g, "")
-  .replace(/```/g, "")
-  .trim();
+    const result = await skillGapAnalyzer(
+      resumeText,
+      targetRole
+    );
 
-console.log("========== CLEANED JSON ==========");
-console.log(cleanedJson);
-console.log("=================================");
+    console.log("CAREER GAP RESULT:");
+    console.dir(result, { depth: null });
 
     res.json({
       success: true,
-      result: JSON.parse(cleanedJson)
+      result
     });
 
   } catch (error) {
-
-  console.log("===== COMPANY PREP ERROR =====");
-  console.error(error);
-
-  res.json({
-    success: true,
-    result: {
-      coreFocus: "Fallback"
-    }
-  });
-
-  }});
-
-
-  app.post("/career-gap", async (req, res) => {
-  try {
-
-    const { resumeText, targetRole } = req.body;
-
-    const result =
-await skillGapAnalyzer(
-resumeText,
-targetRole
-);
-const projects = recommendProjects(
-  targetRole,
-  result.missingSkills
-);
-
-console.log("PROJECT ENGINE OUTPUT:");
-console.dir(projects, { depth: null });
-
-result.recommendedProjects = recommendProjects(
-  targetRole,
-  result.missingSkills,
-  resumeText
-);
-    
-    console.dir(result, { depth: null });
-console.log(result);
-console.log("FINAL RESULT SENT TO FRONTEND:");
-console.log(JSON.stringify(result, null, 2));
-
-    res.json({
-      success: true,
-      result,
-    });
-
-  } catch (err) {
-
-    console.error(err);
+    console.error("CAREER GAP ERROR:");
+    console.error(error);
 
     res.status(500).json({
       success: false,
-      error: err.message,
+      error: error.message || "Skill gap analysis failed."
     });
-
   }
 });
 app.post("/portfolio", async (req, res) => {
   try {
     const { resumeText } = req.body;
+
+    if (!resumeText || !resumeText.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Resume text is required",
+      });
+    }
+
+    console.log("Portfolio generation started");
+    console.log("Resume text length:", resumeText.length);
 
     const result = await generatePortfolio(resumeText);
 
@@ -434,41 +413,93 @@ app.post("/portfolio", async (req, res) => {
     });
 
   } catch (err) {
-
     console.error("Portfolio Error:", err);
 
     res.status(500).json({
       success: false,
       error: err.message,
     });
+  }
+});
+// ======================================================
+// SKILL GAP ANALYZER
+// ======================================================
 
+app.post("/skill-gap", async (req, res) => {
+  try {
+    const { resumeText, targetRole } = req.body;
+
+    console.log("=================================");
+    console.log("SKILL GAP ANALYZER");
+    console.log("TARGET ROLE:", targetRole);
+    console.log("RESUME TEXT LENGTH:", resumeText?.length);
+    console.log("=================================");
+
+    if (!resumeText || !resumeText.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Resume text is missing.",
+      });
+    }
+
+    if (!targetRole || !targetRole.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Target role is missing.",
+      });
+    }
+
+    const result = await skillGapAnalyzer(
+      resumeText,
+      targetRole
+    );
+
+    res.json({
+      success: true,
+      result,
+    });
+
+  } catch (err) {
+    console.error("SKILL GAP ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error:
+        err.message ||
+        "Skill gap analysis failed.",
+    });
   }
 });
 app.post("/company-prep", async (req, res) => {
-
   try {
-
     const { company, role } = req.body;
+
+    if (!company || !role) {
+      return res.status(400).json({
+        success: false,
+        error: "Company and role are required.",
+      });
+    }
 
     const result = await generateCompanyPrep(company, role);
 
     res.json({
       success: true,
-      result
+      result,
     });
-
-  } catch (err) {
-
-    console.error("Company Prep Error:", err);
+  } catch (error) {
+    console.error("Company Prep Error:", error);
 
     res.status(500).json({
       success: false,
-      error: err.message
+      error: "Company preparation generation failed.",
     });
-
   }
-
 });
+
+  
+
+
 // ==========================================
 // BOOTSTRAP INITIALIZATION ENGINE LISTENERS
 // ==========================================
